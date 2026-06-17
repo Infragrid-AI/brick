@@ -1,0 +1,10 @@
+.vscode/**
+src/**
+node_modules/**
+tsconfig.json
+**/*.map
+**/*.ts
+!out/**
+!syntaxes/**
+!snippets/**
+!language-configuration.json

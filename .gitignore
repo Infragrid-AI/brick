@@ -1,0 +1,17 @@
+node_modules/
+dist/
+out/
+*.vsix
+*.js.map
+
+# Generated grammar — committed so the repo is buildable without peggy installed
+# Uncomment the next line if you prefer to always regenerate:
+# packages/brick-core/src/grammar.js
+
+# Test scratch files
+packages/brick-core/src/test-*.js
+packages/brick-cli/test.brick
+packages/brick-cli/test.json
+
+# OS
+.DS_Store

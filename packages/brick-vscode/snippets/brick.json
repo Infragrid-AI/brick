@@ -1,0 +1,132 @@
+{
+  "Main function": {
+    "prefix": "main",
+    "body": [
+      "main(${1:input}: ${2:String}) -> ${3:Table} {",
+      "  $0",
+      "}"
+    ],
+    "description": "Define the main entry function"
+  },
+  "Navigate": {
+    "prefix": "go",
+    "body": ["go to ${1:\"https://\"}"],
+    "description": "Navigate to a URL"
+  },
+  "Click": {
+    "prefix": "click",
+    "body": ["click ${1:\"#selector\"} as \"${2:Label}\""],
+    "description": "Click an element"
+  },
+  "Fill input": {
+    "prefix": "fill",
+    "body": ["fill \"${1:Field label}\" with ${2:\"value\"}"],
+    "description": "Fill a form field"
+  },
+  "Type": {
+    "prefix": "type",
+    "body": ["type \"${1:#selector}\" with \"${2:text}\""],
+    "description": "Type into an element by CSS selector"
+  },
+  "Select dropdown": {
+    "prefix": "select",
+    "body": ["select \"${1:#selector}\" to \"${2:value}\""],
+    "description": "Choose a dropdown value"
+  },
+  "Press key": {
+    "prefix": "press",
+    "body": ["press ${1:Enter}"],
+    "description": "Press a keyboard key"
+  },
+  "Wait": {
+    "prefix": "wait",
+    "body": ["wait ${1:1}s"],
+    "description": "Wait for a duration"
+  },
+  "Scroll": {
+    "prefix": "scroll",
+    "body": ["scroll \"${1:.container}\" by ${2:300}"],
+    "description": "Scroll an element"
+  },
+  "Screenshot": {
+    "prefix": "screenshot",
+    "body": ["screenshot -> @${1:snap}"],
+    "description": "Capture a screenshot"
+  },
+  "AI action": {
+    "prefix": "ai",
+    "body": ["ai \"${1:Describe what to do}\" -> @${2:result}"],
+    "description": "AI-driven action"
+  },
+  "Extract table": {
+    "prefix": "extract table",
+    "body": ["extract table \"${1:Description of the table}\" -> @${2:data}"],
+    "description": "Extract a table from the page"
+  },
+  "Extract value": {
+    "prefix": "extract from",
+    "body": ["extract from @${1:source} \"${2:what to get}\" -> @${3:result}"],
+    "description": "Extract a value from a variable"
+  },
+  "Set variable": {
+    "prefix": "@",
+    "body": ["@${1:name} = ${2:value}"],
+    "description": "Assign a variable"
+  },
+  "Save table": {
+    "prefix": "save",
+    "body": ["save @${1:data} as \"${2:table_name}\""],
+    "description": "Save a table to the database"
+  },
+  "JS block": {
+    "prefix": "js",
+    "body": [
+      "js {",
+      "  ${1:return document.title;}",
+      "} -> @${2:result}"
+    ],
+    "description": "Run JavaScript in the browser"
+  },
+  "Python block": {
+    "prefix": "python",
+    "body": [
+      "python {",
+      "  ${1:result = await page.title()}",
+      "} -> @${2:result}"
+    ],
+    "description": "Run Python with Playwright access"
+  },
+  "Load Excel": {
+    "prefix": "load excel",
+    "body": ["load excel ${1:@file_path} sheet \"${2:Sheet1}\" -> @${3:data}"],
+    "description": "Load an Excel file as a table"
+  },
+  "Upload file": {
+    "prefix": "upload",
+    "body": ["upload ${1:@file_path} to \"${2:input[type=file]}\" -> @${3:result}"],
+    "description": "Upload a file to an input element"
+  },
+  "Report": {
+    "prefix": "report",
+    "body": [
+      "report title: \"${1:My Report}\" {",
+      "  function App() {",
+      "    return (",
+      "      <div>",
+      "        $0",
+      "      </div>",
+      "    )",
+      "  }"
+    ],
+    "description": "Write a report document"
+  },
+  "Type definition": {
+    "prefix": "type",
+    "body": [
+      "type ${1:Name} = {",
+      "  ${2:field}: ${3:String}",
+      "}"
+    ],
+    "description": "Define a type"
+  }
+}

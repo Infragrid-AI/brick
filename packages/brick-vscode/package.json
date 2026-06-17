@@ -1,0 +1,90 @@
+{
+  "name": "brick-lang",
+  "displayName": "Brick Language",
+  "description": "Syntax highlighting, linting, and snippets for the .brick DSL",
+  "version": "0.1.0",
+  "publisher": "intragrid",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Snippets"
+  ],
+  "keywords": [
+    "brick",
+    "dsl",
+    "automation",
+    "intragrid"
+  ],
+  "activationEvents": [
+    "onLanguage:brick"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "brick",
+        "aliases": [
+          "Brick",
+          "brick"
+        ],
+        "extensions": [
+          ".brick"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "brick",
+        "scopeName": "source.brick",
+        "path": "./syntaxes/brick.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "brick",
+        "path": "./snippets/brick.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "brick.build",
+        "title": "Brick: Build",
+        "icon": "$(play)"
+      },
+      {
+        "command": "brick.lint",
+        "title": "Brick: Lint"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "brick.build",
+          "when": "resourceExtname == .brick",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run bundle",
+    "bundle": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "compile": "tsc -p ./ --noEmit",
+    "package": "npm run bundle && npx @vscode/vsce package --no-dependencies --allow-missing-repository"
+  },
+  "dependencies": {
+    "@brick/core": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.4.0"
+  }
+}

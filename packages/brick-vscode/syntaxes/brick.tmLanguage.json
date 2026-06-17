@@ -1,0 +1,291 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Brick",
+  "scopeName": "source.brick",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#type_definition" },
+    { "include": "#function_definition" },
+    { "include": "#statement" },
+    { "include": "#expression" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.double-slash.brick",
+      "match": "//.*$"
+    },
+
+    "type_definition": {
+      "name": "meta.type.brick",
+      "begin": "\\b(type)\\b\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "1": { "name": "keyword.declaration.type.brick" },
+        "2": { "name": "entity.name.type.brick" }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        {
+          "match": "([A-Za-z_][A-Za-z0-9_]*)\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*(\\[\\])?)",
+          "captures": {
+            "1": { "name": "variable.other.property.brick" },
+            "2": { "name": "entity.name.type.brick" }
+          }
+        }
+      ]
+    },
+
+    "function_definition": {
+      "name": "meta.function.brick",
+      "begin": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*\\(",
+      "end": "\\}",
+      "beginCaptures": {
+        "1": { "name": "entity.name.function.brick" }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#statement" },
+        { "include": "#expression" },
+        {
+          "match": "\\b(->)\\b",
+          "name": "keyword.operator.arrow.brick"
+        },
+        {
+          "match": "([A-Za-z_][A-Za-z0-9_]*)\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*(\\[\\])?)",
+          "captures": {
+            "1": { "name": "variable.parameter.brick" },
+            "2": { "name": "entity.name.type.brick" }
+          }
+        }
+      ]
+    },
+
+    "statement": {
+      "patterns": [
+        { "include": "#stmt_navigate" },
+        { "include": "#stmt_click" },
+        { "include": "#stmt_fill" },
+        { "include": "#stmt_type" },
+        { "include": "#stmt_select" },
+        { "include": "#stmt_press" },
+        { "include": "#stmt_wait" },
+        { "include": "#stmt_scroll" },
+        { "include": "#stmt_screenshot" },
+        { "include": "#stmt_ai" },
+        { "include": "#stmt_extract" },
+        { "include": "#stmt_save" },
+        { "include": "#stmt_load" },
+        { "include": "#stmt_upload" },
+        { "include": "#stmt_report" },
+        { "include": "#stmt_return" },
+        { "include": "#stmt_code_block" },
+        { "include": "#stmt_var_assign" }
+      ]
+    },
+
+    "stmt_navigate": {
+      "match": "\\b(go)\\s+(to)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_click": {
+      "match": "\\b(click)\\b(\\s+(as)\\b)?",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "3": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_fill": {
+      "match": "\\b(fill)\\b.*\\b(with)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_type": {
+      "match": "\\b(type)\\b.*\\b(with)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_select": {
+      "match": "\\b(select)\\b.*\\b(to)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_press": {
+      "name": "meta.stmt.press.brick",
+      "match": "\\b(press)\\s+([A-Za-z0-9]+|\"[^\"]+\")",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "constant.other.key.brick" }
+      }
+    },
+
+    "stmt_wait": {
+      "name": "meta.stmt.wait.brick",
+      "match": "\\b(wait)\\s+([0-9]+)(ms|s|m)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "constant.numeric.brick" },
+        "3": { "name": "keyword.other.unit.brick" }
+      }
+    },
+
+    "stmt_scroll": {
+      "match": "\\b(scroll)\\b.*\\b(by)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_screenshot": {
+      "match": "\\b(screenshot)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_ai": {
+      "match": "\\b(ai)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick support.function.ai.brick" }
+      }
+    },
+
+    "stmt_extract": {
+      "match": "\\b(extract)\\s+(table|from)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_save": {
+      "match": "\\b(save)\\b.*\\b(as)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_load": {
+      "match": "\\b(load)\\s+(excel)\\b.*\\b(sheet)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" },
+        "3": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_upload": {
+      "match": "\\b(upload)\\b.*\\b(to)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_report": {
+      "match": "\\b(report)\\s+(title)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.brick" },
+        "2": { "name": "keyword.control.brick" }
+      }
+    },
+
+    "stmt_return": {
+      "match": "\\b(return)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.flow.brick" }
+      }
+    },
+
+    "stmt_code_block": {
+      "name": "meta.embedded.brick",
+      "begin": "\\b(js|python)\\s*\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.brick storage.type.language.brick" }
+      },
+      "contentName": "meta.embedded.code.brick",
+      "patterns": [
+        { "include": "source.js" },
+        { "include": "source.python" }
+      ]
+    },
+
+    "stmt_var_assign": {
+      "patterns": [
+        {
+          "match": "(@[A-Za-z_][A-Za-z0-9_]*)\\s*=",
+          "captures": {
+            "1": { "name": "variable.other.brick" }
+          }
+        },
+        {
+          "match": "->\\s*(@[A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "variable.other.brick" }
+          }
+        }
+      ]
+    },
+
+    "expression": {
+      "patterns": [
+        { "include": "#variable" },
+        { "include": "#string" },
+        { "include": "#number" },
+        { "include": "#boolean" },
+        { "include": "#null" },
+        { "include": "#arrow" }
+      ]
+    },
+
+    "variable": {
+      "name": "variable.other.brick",
+      "match": "@[A-Za-z_][A-Za-z0-9_]*"
+    },
+
+    "string": {
+      "name": "string.quoted.double.brick",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "name": "constant.character.escape.brick", "match": "\\\\." }
+      ]
+    },
+
+    "number": {
+      "name": "constant.numeric.brick",
+      "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+    },
+
+    "boolean": {
+      "name": "constant.language.boolean.brick",
+      "match": "\\b(true|false)\\b"
+    },
+
+    "null": {
+      "name": "constant.language.null.brick",
+      "match": "\\bnull\\b"
+    },
+
+    "arrow": {
+      "name": "keyword.operator.arrow.brick",
+      "match": "->"
+    }
+  }
+}
