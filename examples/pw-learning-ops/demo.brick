@@ -1,0 +1,66 @@
+module pw_intervention_demo
+
+// ── Edit this path to wherever you cloned the brick repo ──
+@dashboard = "file:///Users/ephraim888sun/Documents/Code/intragrid/brick/examples/pw-learning-ops/mock/student-dashboard.html"
+
+main() {
+  // 1. Open the mock dashboard
+  navigate @dashboard
+  wait 800
+  screenshot -> @snapshot
+
+  // 2. Pull every student flagged At Risk or Warning
+  extract table "all rows in the student table — return Student ID, Name, Subject Batch, Teacher, Attendance %, Assignment Completion %, Last Test Score, 7-Day Trend, Days At Risk, Status, Weakest Topic for every row" -> @all_students
+
+  extract from @all_students "only the rows where Status is At Risk — include all columns" -> @at_risk
+
+  extract from @all_students "only the rows where Status is Warning — include all columns" -> @warnings
+
+  // 3. Identify chronic cases (at-risk 7+ days)
+  extract from @at_risk "students where Days At Risk is 7 or more — list their name, batch, teacher, weakest topic, and days at risk" -> @chronic
+
+  // 4. Build a subject-level breakdown
+  extract from @all_students "count how many students are At Risk, Warning, and On Track for each Subject Batch — format as a table" -> @risk_by_batch
+
+  // 5. Map what each at-risk student needs
+  extract from @at_risk "for each student write one recommended action: if attendance is the lowest metric suggest attendance intervention, if assignment completion is lowest suggest DPP assignment, if test score is lowest suggest revision video — include student name and recommended action" -> @action_plan
+
+  // 6. Draft WhatsApp message per student (simulated)
+  extract from @at_risk "write a personalised 2-sentence WhatsApp message for each student that mentions their name, their weakest topic, and asks them to complete their assignment — keep it encouraging" -> @notification_drafts
+
+  // 7. Save outputs
+  save @at_risk as "pw_at_risk_students"
+  save @action_plan as "pw_intervention_actions"
+  save @risk_by_batch as "pw_risk_by_batch"
+
+  // 8. Report
+  report title: "PW Daily Learning Intervention — Demo" {
+    ## Dashboard Snapshot
+    @snapshot
+
+    ## All Students
+    @all_students
+
+    ## At-Risk Students (immediate action required)
+    @at_risk
+
+    ## Warning Students (monitor closely)
+    @warnings
+
+    ## Chronic Cases — At Risk 7+ Days (escalate to teacher)
+    @chronic
+
+    ## Risk Distribution by Subject Batch
+    @risk_by_batch
+
+    ## Recommended Action per Student
+    @action_plan
+
+    ## WhatsApp Notifications to Send
+    @notification_drafts
+
+    ---
+    Thresholds: Attendance < 60% | Assignment < 50% | Score drop > 20 pts
+    Data source: mock/student-dashboard.html
+  }
+}
