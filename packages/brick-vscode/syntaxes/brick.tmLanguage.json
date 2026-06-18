@@ -56,10 +56,11 @@
 
     "function_definition": {
       "name": "meta.function.brick",
-      "begin": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*\\(",
+      "begin": "\\b(?:(fn)\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\s*\\(",
       "end": "\\}",
       "beginCaptures": {
-        "1": { "name": "entity.name.function.brick" }
+        "1": { "name": "keyword.declaration.function.brick" },
+        "2": { "name": "entity.name.function.brick" }
       },
       "patterns": [
         { "include": "#comment" },
@@ -97,7 +98,6 @@
         { "include": "#stmt_import" },
         { "include": "#stmt_read" },
         { "include": "#stmt_cookies" },
-        { "include": "#stmt_save" },
         { "include": "#stmt_load" },
         { "include": "#stmt_upload" },
         { "include": "#stmt_report" },
@@ -285,8 +285,16 @@
     },
 
     "stmt_read": {
-      "match": "\\b(read_pdf_pages|read_pdf|read_file|read_gdoc|ocr)\\b",
-      "captures": { "1": { "name": "keyword.control.brick" } }
+      "patterns": [
+        {
+          "match": "\\b(open_file)\\b",
+          "captures": { "1": { "name": "keyword.control.brick support.function.builtin.brick" } }
+        },
+        {
+          "match": "\\b(read_pdf_pages|read_pdf|read_gdoc|ocr)\\b",
+          "captures": { "1": { "name": "keyword.control.brick" } }
+        }
+      ]
     },
 
     "stmt_import": {
@@ -297,22 +305,6 @@
     "stmt_cookies": {
       "match": "\\b(set_cookies|load_excel_all)\\b",
       "captures": { "1": { "name": "keyword.control.brick" } }
-    },
-
-    "stmt_save": {
-      "patterns": [
-        {
-          "match": "\\b(save_table)\\b",
-          "captures": { "1": { "name": "keyword.control.brick" } }
-        },
-        {
-          "match": "\\b(save)\\b.*\\b(as)\\b",
-          "captures": {
-            "1": { "name": "keyword.control.brick" },
-            "2": { "name": "keyword.control.brick" }
-          }
-        }
-      ]
     },
 
     "stmt_load": {

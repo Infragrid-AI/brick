@@ -64,7 +64,9 @@ TopLevelVar
 // ── Function definition ───────────────────────────────────────────────────────
 
 FunctionDef
-  = name:Identifier _ "(" _ params:ParamList _ ")" _ ret:ReturnType? _ "{" _ body:Stmt* _ "}" _
+  = "fn" _ name:Identifier _ "(" _ params:ParamList _ ")" _ ret:ReturnType? _ "{" _ body:Stmt* _ "}" _
+  { return { kind: "function_def", name, params: params || [], returnType: ret || undefined, body, location: loc() }; }
+  / name:Identifier _ "(" _ params:ParamList _ ")" _ ret:ReturnType? _ "{" _ body:Stmt* _ "}" _
   { return { kind: "function_def", name, params: params || [], returnType: ret || undefined, body, location: loc() }; }
 
 ParamList
@@ -111,9 +113,9 @@ Stmt
   / OcrStmt
   / ReadFileStmt
   / ReadGdocStmt
+  / LoadSheetStmt
   / SetVarAssignStmt
   / SetVarArrowStmt
-  / SaveTableStmt
   / JsBlockStmt
   / PyBlockStmt
   / LoadExcelStmt
@@ -181,12 +183,18 @@ AiStmt
 
 // extract_table "description" [as Type] -> @var
 ExtractTableStmt
-  = "extract_table" _ description:StringLit _ as_:AsClause? _ "->" _ "@" variable:Identifier _
+  // Function-call style: extract_table("desc", Type[]) -> @var
+  = "extract_table" _ "(" _ description:StringLit _ "," _ as_:TypeAnnotation _ ")" _ "->" _ "@" variable:Identifier _
+  { return { kind: "extract_table", description, outputType: as_, variable, location: loc() }; }
+  / "extract_table" _ "(" _ description:StringLit _ ")" _ "->" _ "@" variable:Identifier _
+  { return { kind: "extract_table", description, outputType: undefined, variable, location: loc() }; }
+  // Keyword style: extract_table "desc" [as Type] -> @var
+  / "extract_table" _ description:StringLit _ as_:AsClause? _ "->" _ "@" variable:Identifier _
   { return { kind: "extract_table", description, outputType: as_ || undefined, variable, location: loc() }; }
   / "extract" _ "table" _ description:StringLit _ as_:AsClause? _ "->" _ "@" variable:Identifier _
   { return { kind: "extract_table", description, outputType: as_ || undefined, variable, location: loc() }; }
 
-// extract_from @var "query" -> @result
+// extract from @var "query" -> @result  (compiles to gen_primitive)
 ExtractStmt
   = "extract_from" _ "@" source:Identifier _ query:StringLit _ "->" _ "@" variable:Identifier _
   { return { kind: "extract", source, query, variable, location: loc() }; }
@@ -258,15 +266,20 @@ OcrStmt
   = "ocr" _ source:Expr _ "->" _ "@" variable:Identifier _
   { return { kind: "ocr_image", source, variable, location: loc() }; }
 
-// read_file "url_or_@var" [as "filename.ext"] -> @text
+// open_file "url_or_@var" [as "filename.ext"] -> @text
 ReadFileStmt
-  = "read_file" _ source:Expr _ fname:("as" _ f:StringLit { return f; })? _ "->" _ "@" variable:Identifier _
-  { return { kind: "read_file", source, filename: fname || undefined, variable, location: loc() }; }
+  = "open_file" _ source:Expr _ fname:("as" _ f:StringLit { return f; })? _ "->" _ "@" variable:Identifier _
+  { return { kind: "open_file", source, filename: fname || undefined, variable, location: loc() }; }
 
 // read_gdoc "https://docs.google.com/..." -> @text
 ReadGdocStmt
   = "read_gdoc" _ url:Expr _ "->" _ "@" variable:Identifier _
   { return { kind: "read_gdoc", url, variable, location: loc() }; }
+
+// load_sheet "Sheet Name" -> @rows
+LoadSheetStmt
+  = "load_sheet" _ name:Expr _ "->" _ "@" variable:Identifier _
+  { return { kind: "load_sheet", name, variable, location: loc() }; }
 
 // @var = value
 SetVarAssignStmt
@@ -278,12 +291,6 @@ SetVarArrowStmt
   = value:Expr _ "->" _ "@" variable:Identifier _
   { return { kind: "set_var", variable, value, location: loc() }; }
 
-// save_table @var "name"  (also: save @var as "name")
-SaveTableStmt
-  = "save_table" _ "@" variable:Identifier _ name:StringLit _
-  { return { kind: "save_table", variable, name, location: loc() }; }
-  / "save" _ "@" variable:Identifier _ "as" _ name:StringLit _
-  { return { kind: "save_table", variable, name, location: loc() }; }
 
 // js { code } [-> @var]
 JsBlockStmt
@@ -300,8 +307,8 @@ BlockCode
   = chars:BlockChar* { return chars.join(""); }
 
 BlockChar
-  = !("}" [^{]*) c:. { return c; }
-  / "{" inner:BlockCode "}" { return "{" + inner + "}"; }
+  = "{" inner:BlockCode "}" { return "{" + inner + "}"; }
+  / !"}" c:. { return c; }
 
 // load_excel @file "Sheet1" -> @var  (also: load excel @file sheet "Sheet1" -> @var)
 LoadExcelStmt
