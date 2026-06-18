@@ -105,5 +105,94 @@ function stepToLine(step: RunbookStep): string {
       const body = step.content.split("\n").map(l => "  " + l).join("\n");
       return `report title: "${step.title.replace(/"/g, '\\"')}" {\n${body}\n  }`;
     }
+
+    case "gen_primitive": {
+      const model = step.model ? ` using "${step.model}"` : "";
+      const base = `gen "${step.prompt?.replace(/"/g, '\\"')}"${model}`;
+      return step.variable ? `${base} -> @${step.variable}` : base;
+    }
+
+    case "gen_with_code": {
+      const model = step.model ? ` using "${step.model}"` : "";
+      const base = `gen_code "${step.prompt?.replace(/"/g, '\\"')}"${model}`;
+      return step.variable ? `${base} -> @${step.variable}` : base;
+    }
+
+    case "set_cookies":
+      return `set_cookies ${q(step.cookies)}`;
+
+    case "excel_to_csvs":
+      return `load_excel_all ${q(step.source)} -> @${step.variable}`;
+
+    case "read_pdf":
+      return `read_pdf ${q(step.source)} -> @${step.variable}`;
+
+    case "ocr_image":
+      return `ocr ${q(step.source)} -> @${step.variable}`;
+
+    case "read_file": {
+      const fname = step.filename ? ` as "${step.filename}"` : "";
+      return `read_file ${q(step.source)}${fname} -> @${step.variable}`;
+    }
+
+    case "read_gdoc":
+      return `read_gdoc ${q(step.url)} -> @${step.variable}`;
+
+    case "compound_assign":
+      return `@${step.variable} ${step.op} ${step.value}`;
+
+    case "log":
+      return `log ${q(step.value)}`;
+
+    case "fail":
+      return `fail "${step.message.replace(/"/g, '\\"')}"`;
+
+    case "break":    return "break";
+    case "continue": return "continue";
+
+    case "if": {
+      const cond = serializeCondition(step.condition);
+      const thenLines = step.then.map(s => "  " + stepToLine(s)).join("\n");
+      const base = `if ${cond} {\n${thenLines}\n}`;
+      if (!step.else || step.else.length === 0) return base;
+      const elseLines = step.else.map(s => "  " + stepToLine(s)).join("\n");
+      return `${base} else {\n${elseLines}\n}`;
+    }
+
+    case "for_each": {
+      const body = step.body.map(s => "  " + stepToLine(s)).join("\n");
+      return `for @${step.variable} in ${q(step.collection)} {\n${body}\n}`;
+    }
+
+    case "repeat": {
+      const body = step.body.map(s => "  " + stepToLine(s)).join("\n");
+      return `repeat ${step.count} {\n${body}\n}`;
+    }
+
+    case "while": {
+      const cond = serializeCondition(step.condition);
+      const body = step.body.map(s => "  " + stepToLine(s)).join("\n");
+      return `while ${cond} {\n${body}\n}`;
+    }
+
+    default:
+      return `// unknown step: ${(step as { type: string }).type}`;
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function serializeCondition(cond: Record<string, any>): string {
+  if (cond.op && cond.left && cond.right) {
+    return `${serializeCondAtom(cond.left)} ${cond.op} ${serializeCondAtom(cond.right)}`;
+  }
+  if (cond.op === "not") return `not ${serializeCondAtom(cond.expr)}`;
+  return serializeCondAtom(cond);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function serializeCondAtom(atom: Record<string, any>): string {
+  if (atom.type === "var")     return `@${atom.name}`;
+  if (atom.type === "prop")    return `@${atom.var}.${atom.prop}`;
+  if (atom.type === "literal") return typeof atom.value === "string" ? `"${atom.value}"` : String(atom.value);
+  return String(atom);
 }

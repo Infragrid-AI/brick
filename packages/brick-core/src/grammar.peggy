@@ -37,6 +37,8 @@ ModuleDecl
 TypeDef
   = "type" _ name:Identifier _ "=" _ "{" _ fields:TypeField* _ "}" _
   { return { kind: "type_def", name, fields, location: loc() }; }
+  / "type" _ name:Identifier _ "=" _ first:StringLit _ rest:("|" _ v:StringLit _ { return v; })* _
+  { return { kind: "enum_def", name, variants: [first, ...rest], location: loc() }; }
 
 TypeField
   = name:Identifier _ ":" _ type:TypeAnnotation _ ","? _
@@ -72,7 +74,16 @@ ReturnType
 // ── Statements ────────────────────────────────────────────────────────────────
 
 Stmt
-  = NavigateStmt
+  = IfStmt
+  / ForStmt
+  / RepeatStmt
+  / WhileStmt
+  / BreakStmt
+  / ContinueStmt
+  / LogStmt
+  / FailStmt
+  / CompoundAssignStmt
+  / NavigateStmt
   / ClickStmt
   / FillStmt
   / TypeStmt
@@ -84,6 +95,14 @@ Stmt
   / AiStmt
   / ExtractTableStmt
   / ExtractStmt
+  / GenCodeStmt
+  / GenStmt
+  / SetCookiesStmt
+  / LoadExcelAllStmt
+  / ReadPdfStmt
+  / OcrStmt
+  / ReadFileStmt
+  / ReadGdocStmt
   / SetVarAssignStmt
   / SetVarArrowStmt
   / SaveTableStmt
@@ -152,15 +171,66 @@ AiStmt
   = "ai" _ instruction:StringLit variable:(_ "->" _ "@" n:Identifier { return n; })? _
   { return { kind: "ai", instruction, variable: variable || undefined, location: loc() }; }
 
-// extract table "description" -> @var
+// extract_table "description" [as Type] -> @var
 ExtractTableStmt
-  = "extract" _ "table" _ description:StringLit _ "->" _ "@" variable:Identifier _
-  { return { kind: "extract_table", description, variable, location: loc() }; }
+  = "extract_table" _ description:StringLit _ as_:AsClause? _ "->" _ "@" variable:Identifier _
+  { return { kind: "extract_table", description, outputType: as_ || undefined, variable, location: loc() }; }
+  / "extract" _ "table" _ description:StringLit _ as_:AsClause? _ "->" _ "@" variable:Identifier _
+  { return { kind: "extract_table", description, outputType: as_ || undefined, variable, location: loc() }; }
 
-// extract from @var "query" -> @result
+// extract_from @var "query" -> @result
 ExtractStmt
-  = "extract" _ "from" _ "@" source:Identifier _ query:StringLit _ "->" _ "@" variable:Identifier _
+  = "extract_from" _ "@" source:Identifier _ query:StringLit _ "->" _ "@" variable:Identifier _
   { return { kind: "extract", source, query, variable, location: loc() }; }
+  / "extract" _ "from" _ "@" source:Identifier _ query:StringLit _ "->" _ "@" variable:Identifier _
+  { return { kind: "extract", source, query, variable, location: loc() }; }
+
+AsClause  = "as" _ t:TypeAnnotation { return t; }
+UsingClause = "using" _ m:StringLit { return m; }
+
+// gen "prompt" [as Type] [using "model"] -> @var
+GenStmt
+  = "gen" _ prompt:StringLit _ as_:AsClause? _ m:UsingClause? _ "->" _ "@" variable:Identifier _
+  { return { kind: "gen", prompt, outputType: as_ || undefined, model: m || undefined, variable, location: loc() }; }
+  / "gen" _ prompt:StringLit _ as_:AsClause? _ m:UsingClause? _
+  { return { kind: "gen", prompt, outputType: as_ || undefined, model: m || undefined, variable: undefined, location: loc() }; }
+
+// gen_code "prompt" [as Type] [using "model"] -> @var
+GenCodeStmt
+  = "gen_code" _ prompt:StringLit _ as_:AsClause? _ m:UsingClause? _ "->" _ "@" variable:Identifier _
+  { return { kind: "gen_code", prompt, outputType: as_ || undefined, model: m || undefined, variable, location: loc() }; }
+  / "gen_code" _ prompt:StringLit _ as_:AsClause? _ m:UsingClause? _
+  { return { kind: "gen_code", prompt, outputType: as_ || undefined, model: m || undefined, variable: undefined, location: loc() }; }
+
+// set_cookies @var  |  set_cookies "[{...}]"
+SetCookiesStmt
+  = "set_cookies" _ cookies:Expr _
+  { return { kind: "set_cookies", cookies, location: loc() }; }
+
+// load_excel_all "url_or_var" -> @sheets
+LoadExcelAllStmt
+  = "load_excel_all" _ source:Expr _ "->" _ "@" variable:Identifier _
+  { return { kind: "load_excel_all", source, variable, location: loc() }; }
+
+// read_pdf "url_or_@var" -> @text
+ReadPdfStmt
+  = "read_pdf" _ source:Expr _ "->" _ "@" variable:Identifier _
+  { return { kind: "read_pdf", source, variable, location: loc() }; }
+
+// ocr "url_or_@var" -> @text  (image OCR)
+OcrStmt
+  = "ocr" _ source:Expr _ "->" _ "@" variable:Identifier _
+  { return { kind: "ocr_image", source, variable, location: loc() }; }
+
+// read_file "url_or_@var" [as "filename.ext"] -> @text
+ReadFileStmt
+  = "read_file" _ source:Expr _ fname:("as" _ f:StringLit { return f; })? _ "->" _ "@" variable:Identifier _
+  { return { kind: "read_file", source, filename: fname || undefined, variable, location: loc() }; }
+
+// read_gdoc "https://docs.google.com/..." -> @text
+ReadGdocStmt
+  = "read_gdoc" _ url:Expr _ "->" _ "@" variable:Identifier _
+  { return { kind: "read_gdoc", url, variable, location: loc() }; }
 
 // @var = value
 SetVarAssignStmt
@@ -172,9 +242,11 @@ SetVarArrowStmt
   = value:Expr _ "->" _ "@" variable:Identifier _
   { return { kind: "set_var", variable, value, location: loc() }; }
 
-// save @var as "name"
+// save_table @var "name"  (also: save @var as "name")
 SaveTableStmt
-  = "save" _ "@" variable:Identifier _ "as" _ name:StringLit _
+  = "save_table" _ "@" variable:Identifier _ name:StringLit _
+  { return { kind: "save_table", variable, name, location: loc() }; }
+  / "save" _ "@" variable:Identifier _ "as" _ name:StringLit _
   { return { kind: "save_table", variable, name, location: loc() }; }
 
 // js { code } [-> @var]
@@ -195,9 +267,11 @@ BlockChar
   = !("}" [^{]*) c:. { return c; }
   / "{" inner:BlockCode "}" { return "{" + inner + "}"; }
 
-// load excel <file> sheet "Sheet1" -> @var
+// load_excel @file "Sheet1" -> @var  (also: load excel @file sheet "Sheet1" -> @var)
 LoadExcelStmt
-  = "load" _ "excel" _ file:Expr _ "sheet" _ sheet:StringLit _ "->" _ "@" variable:Identifier _
+  = "load_excel" _ file:Expr _ sheet:StringLit _ "->" _ "@" variable:Identifier _
+  { return { kind: "load_excel", file, sheet, variable, location: loc() }; }
+  / "load" _ "excel" _ file:Expr _ "sheet" _ sheet:StringLit _ "->" _ "@" variable:Identifier _
   { return { kind: "load_excel", file, sheet, variable, location: loc() }; }
 
 // upload <file> to <selector> [-> @var]
@@ -215,6 +289,82 @@ ReturnStmt
   = "return" _ value:Expr _
   { return { kind: "return", value, location: loc() }; }
 
+// ── Control flow ──────────────────────────────────────────────────────────────
+
+// if <cond> { stmts } [else { stmts }]
+IfStmt
+  = "if" _ cond:CondExpr _ "{" _ then:Stmt* _ "}" _ alt:ElseClause? _
+  { return { kind: "if", condition: cond, then: then, else: alt || [], location: loc() }; }
+
+ElseClause
+  = "else" _ "if" _ cond:CondExpr _ "{" _ body:Stmt* _ "}" _ alt:ElseClause?
+  { return [{ kind: "if", condition: cond, then: body, else: alt || [] }]; }
+  / "else" _ "{" _ body:Stmt* _ "}" _
+  { return body; }
+
+// for @item in @list { stmts }
+ForStmt
+  = "for" _ "@" variable:Identifier _ "in" _ collection:Expr _ "{" _ body:Stmt* _ "}" _
+  { return { kind: "for_each", variable, collection, body, location: loc() }; }
+
+// repeat <n> { stmts }
+RepeatStmt
+  = "repeat" _ n:Number _ "{" _ body:Stmt* _ "}" _
+  { return { kind: "repeat", count: n, body, location: loc() }; }
+
+// while <cond> { stmts }
+WhileStmt
+  = "while" _ cond:CondExpr _ "{" _ body:Stmt* _ "}" _
+  { return { kind: "while", condition: cond, body, location: loc() }; }
+
+// break / continue
+BreakStmt
+  = "break" _
+  { return { kind: "break", location: loc() }; }
+
+ContinueStmt
+  = "continue" _
+  { return { kind: "continue", location: loc() }; }
+
+// log <expr>
+LogStmt
+  = "log" _ value:Expr _
+  { return { kind: "log", value, location: loc() }; }
+
+// fail "reason"
+FailStmt
+  = "fail" _ message:StringLit _
+  { return { kind: "fail", message, location: loc() }; }
+
+// @var += n  /  @var -= n  /  @var *= n  /  @var /= n
+CompoundAssignStmt
+  = "@" variable:Identifier _ op:CompoundOp _ value:Expr _
+  { return { kind: "compound_assign", variable, op, value, location: loc() }; }
+
+CompoundOp = "+=" / "-=" / "*=" / "/="
+
+// ── Condition expressions ─────────────────────────────────────────────────────
+
+// Supports:  @var > 5  |  @var.field == "x"  |  @var  |  true/false
+CondExpr
+  = left:CondAtom _ op:CompareOp _ right:CondAtom
+  { return { kind: "compare", op, left, right }; }
+  / "not" _ expr:CondAtom
+  { return { kind: "not", expr }; }
+  / atom:CondAtom
+  { return atom; }
+
+CompareOp = ">=" / "<=" / "!=" / "==" / ">" / "<"
+
+CondAtom
+  = "@" name:Identifier prop:("." p:Identifier { return p; })?
+  { return prop !== null ? { kind: "prop", var: name, prop } : { kind: "var", name }; }
+  / s:StringLit   { return { kind: "string", value: s }; }
+  / n:Number      { return { kind: "number", value: n }; }
+  / "true"        { return { kind: "bool", value: true }; }
+  / "false"       { return { kind: "bool", value: false }; }
+  / "null"        { return { kind: "null" }; }
+
 // ── Expressions ──────────────────────────────────────────────────────────────
 
 Expr
@@ -227,7 +377,8 @@ Expr
   / NullExpr
 
 VarRef
-  = "@" name:Identifier { return { kind: "var", name }; }
+  = "@" name:Identifier prop:("." p:Identifier { return p; })?
+  { return prop !== null ? { kind: "prop", var: name, prop } : { kind: "var", name }; }
 
 StringExpr
   = s:StringLit { return { kind: "string", value: s }; }

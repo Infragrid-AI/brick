@@ -4,7 +4,9 @@
   "scopeName": "source.brick",
   "patterns": [
     { "include": "#comment" },
+    { "include": "#module_declaration" },
     { "include": "#type_definition" },
+    { "include": "#enum_definition" },
     { "include": "#function_definition" },
     { "include": "#statement" },
     { "include": "#expression" }
@@ -13,6 +15,14 @@
     "comment": {
       "name": "comment.line.double-slash.brick",
       "match": "//.*$"
+    },
+
+    "module_declaration": {
+      "match": "\\b(module)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.declaration.module.brick" },
+        "2": { "name": "entity.name.namespace.brick" }
+      }
     },
 
     "type_definition": {
@@ -33,6 +43,15 @@
           }
         }
       ]
+    },
+
+    "enum_definition": {
+      "match": "\\b(type)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*(\"[^\"]*\"(?:\\s*\\|\\s*\"[^\"]*\")*)",
+      "captures": {
+        "1": { "name": "keyword.declaration.type.brick" },
+        "2": { "name": "entity.name.type.brick" },
+        "3": { "name": "string.quoted.double.brick" }
+      }
     },
 
     "function_definition": {
@@ -62,6 +81,7 @@
 
     "statement": {
       "patterns": [
+        { "include": "#stmt_control_flow" },
         { "include": "#stmt_navigate" },
         { "include": "#stmt_click" },
         { "include": "#stmt_fill" },
@@ -73,14 +93,76 @@
         { "include": "#stmt_screenshot" },
         { "include": "#stmt_ai" },
         { "include": "#stmt_extract" },
+        { "include": "#stmt_gen" },
+        { "include": "#stmt_read" },
+        { "include": "#stmt_cookies" },
         { "include": "#stmt_save" },
         { "include": "#stmt_load" },
         { "include": "#stmt_upload" },
         { "include": "#stmt_report" },
         { "include": "#stmt_return" },
         { "include": "#stmt_code_block" },
-        { "include": "#stmt_var_assign" }
+        { "include": "#stmt_var_assign" },
+        { "include": "#stmt_compound_assign" }
       ]
+    },
+
+    "stmt_control_flow": {
+      "patterns": [
+        {
+          "name": "meta.block.if.brick",
+          "begin": "\\b(if|while)\\b",
+          "end": "(?<=\\})",
+          "beginCaptures": { "1": { "name": "keyword.control.flow.brick" } },
+          "patterns": [
+            { "include": "#stmt_operator_compare" },
+            { "include": "#statement" },
+            { "include": "#expression" },
+            {
+              "match": "\\b(else)\\b",
+              "name": "keyword.control.flow.brick"
+            }
+          ]
+        },
+        {
+          "name": "meta.block.for.brick",
+          "begin": "\\b(for)\\b",
+          "end": "(?<=\\})",
+          "beginCaptures": { "1": { "name": "keyword.control.flow.brick" } },
+          "patterns": [
+            { "match": "\\b(in)\\b", "name": "keyword.control.flow.brick" },
+            { "include": "#statement" },
+            { "include": "#expression" }
+          ]
+        },
+        {
+          "name": "meta.block.repeat.brick",
+          "begin": "\\b(repeat)\\b",
+          "end": "(?<=\\})",
+          "beginCaptures": { "1": { "name": "keyword.control.flow.brick" } },
+          "patterns": [
+            { "include": "#statement" },
+            { "include": "#expression" }
+          ]
+        },
+        {
+          "match": "\\b(break|continue)\\b",
+          "name": "keyword.control.flow.brick"
+        },
+        {
+          "match": "\\b(log|fail)\\b",
+          "name": "keyword.control.brick support.function.builtin.brick"
+        },
+        {
+          "match": "\\b(not)\\b",
+          "name": "keyword.operator.logical.brick"
+        }
+      ]
+    },
+
+    "stmt_operator_compare": {
+      "match": "(>=|<=|!=|==|>|<)",
+      "name": "keyword.operator.comparison.brick"
     },
 
     "stmt_navigate": {
@@ -142,7 +224,7 @@
 
     "stmt_wait": {
       "name": "meta.stmt.wait.brick",
-      "match": "\\b(wait)\\s+([0-9]+)(ms|s|m)\\b",
+      "match": "\\b(wait)\\s+([0-9]+(?:\\.[0-9]+)?)(ms|s|m)?\\b",
       "captures": {
         "1": { "name": "keyword.control.brick" },
         "2": { "name": "constant.numeric.brick" },
@@ -173,28 +255,75 @@
     },
 
     "stmt_extract": {
-      "match": "\\b(extract)\\s+(table|from)\\b",
-      "captures": {
-        "1": { "name": "keyword.control.brick" },
-        "2": { "name": "keyword.control.brick" }
-      }
+      "patterns": [
+        {
+          "match": "\\b(extract_table|extract_from)\\b",
+          "captures": { "1": { "name": "keyword.control.brick" } }
+        },
+        {
+          "match": "\\b(extract)\\s+(table|from)\\b",
+          "captures": {
+            "1": { "name": "keyword.control.brick" },
+            "2": { "name": "keyword.control.brick" }
+          }
+        }
+      ]
+    },
+
+    "stmt_gen": {
+      "patterns": [
+        {
+          "match": "\\b(gen_code|gen)\\b",
+          "captures": { "1": { "name": "keyword.control.brick support.function.builtin.brick" } }
+        },
+        {
+          "match": "\\b(as|using)\\b",
+          "captures": { "1": { "name": "keyword.control.brick" } }
+        }
+      ]
+    },
+
+    "stmt_read": {
+      "match": "\\b(read_pdf|read_file|read_gdoc|ocr)\\b",
+      "captures": { "1": { "name": "keyword.control.brick" } }
+    },
+
+    "stmt_cookies": {
+      "match": "\\b(set_cookies|load_excel_all)\\b",
+      "captures": { "1": { "name": "keyword.control.brick" } }
     },
 
     "stmt_save": {
-      "match": "\\b(save)\\b.*\\b(as)\\b",
-      "captures": {
-        "1": { "name": "keyword.control.brick" },
-        "2": { "name": "keyword.control.brick" }
-      }
+      "patterns": [
+        {
+          "match": "\\b(save_table)\\b",
+          "captures": { "1": { "name": "keyword.control.brick" } }
+        },
+        {
+          "match": "\\b(save)\\b.*\\b(as)\\b",
+          "captures": {
+            "1": { "name": "keyword.control.brick" },
+            "2": { "name": "keyword.control.brick" }
+          }
+        }
+      ]
     },
 
     "stmt_load": {
-      "match": "\\b(load)\\s+(excel)\\b.*\\b(sheet)\\b",
-      "captures": {
-        "1": { "name": "keyword.control.brick" },
-        "2": { "name": "keyword.control.brick" },
-        "3": { "name": "keyword.control.brick" }
-      }
+      "patterns": [
+        {
+          "match": "\\b(load_excel)\\b",
+          "captures": { "1": { "name": "keyword.control.brick" } }
+        },
+        {
+          "match": "\\b(load)\\s+(excel)\\b.*\\b(sheet)\\b",
+          "captures": {
+            "1": { "name": "keyword.control.brick" },
+            "2": { "name": "keyword.control.brick" },
+            "3": { "name": "keyword.control.brick" }
+          }
+        }
+      ]
     },
 
     "stmt_upload": {
@@ -249,6 +378,14 @@
           }
         }
       ]
+    },
+
+    "stmt_compound_assign": {
+      "match": "(@[A-Za-z_][A-Za-z0-9_]*)\\s*(\\+=|-=|\\*=|/=)",
+      "captures": {
+        "1": { "name": "variable.other.brick" },
+        "2": { "name": "keyword.operator.assignment.compound.brick" }
+      }
     },
 
     "expression": {

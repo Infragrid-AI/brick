@@ -18,9 +18,17 @@ export type Literal = StringLiteral | NumberLiteral | BoolLiteral | NullLiteral 
 
 // ── Variable reference: @name ────────────────────────────────────────────────
 
-export type VarRef = { kind: "var"; name: string; location?: Location };
+export type VarRef  = { kind: "var";  name: string; location?: Location };
+export type PropRef = { kind: "prop"; var: string; prop: string; location?: Location };
 
-export type Expr = Literal | VarRef;
+export type Expr = Literal | VarRef | PropRef;
+
+// Condition expression (for if/while)
+export type CondAtom = VarRef | PropRef | StringLiteral | NumberLiteral | BoolLiteral | NullLiteral;
+export type CondExpr =
+  | { kind: "compare"; op: string; left: CondAtom; right: CondAtom }
+  | { kind: "not"; expr: CondAtom }
+  | CondAtom;
 
 // ── Type annotations ─────────────────────────────────────────────────────────
 
@@ -36,6 +44,14 @@ export type TypeDef = {
   kind: "type_def";
   name: string;
   fields: TypeField[];
+  location?: Location;
+};
+
+// Enum type: type Status = "pending" | "active" | "closed"
+export type EnumTypeDef = {
+  kind: "enum_def";
+  name: string;
+  variants: string[];
   location?: Location;
 };
 
@@ -75,8 +91,8 @@ export type ScreenshotStmt = { kind: "screenshot"; variable?: string; location?:
 // ai "instruction" [-> @var]
 export type AiStmt = { kind: "ai"; instruction: string; variable?: string; location?: Location };
 
-// extract table "description" -> @var
-export type ExtractTableStmt = { kind: "extract_table"; description: string; variable: string; location?: Location };
+// extract_table "description" [as Type] -> @var
+export type ExtractTableStmt = { kind: "extract_table"; description: string; outputType?: TypeAnnotation; variable: string; location?: Location };
 
 // @var = value  |  value -> @var
 export type SetVarStmt = { kind: "set_var"; variable: string; value: Expr; location?: Location };
@@ -105,6 +121,35 @@ export type ReportStmt = { kind: "report"; title: Expr; content: string; locatio
 // return @var | value
 export type ReturnStmt = { kind: "return"; value: Expr; location?: Location };
 
+// gen "prompt" [as Type] [using "model"] -> @var
+export type GenStmt         = { kind: "gen";          prompt: string; outputType?: TypeAnnotation; model?: string; variable?: string; location?: Location };
+// gen_code "prompt" [as Type] [using "model"] -> @var
+export type GenCodeStmt     = { kind: "gen_code";     prompt: string; outputType?: TypeAnnotation; model?: string; variable?: string; location?: Location };
+// set_cookies @var | "[{...}]"
+export type SetCookiesStmt  = { kind: "set_cookies";  cookies: Expr; location?: Location };
+// load_excel_all "url" -> @sheets
+export type LoadExcelAllStmt = { kind: "load_excel_all"; source: Expr; variable: string; location?: Location };
+
+// read_pdf "url" -> @text
+export type ReadPdfStmt   = { kind: "read_pdf";   source: Expr; variable: string; location?: Location };
+// ocr "url" -> @text
+export type OcrImageStmt  = { kind: "ocr_image";  source: Expr; variable: string; location?: Location };
+// read_file "url" [as "filename"] -> @text
+export type ReadFileStmt  = { kind: "read_file";  source: Expr; filename?: string; variable: string; location?: Location };
+// read_gdoc "https://docs.google.com/..." -> @text
+export type ReadGdocStmt  = { kind: "read_gdoc";  url: Expr; variable: string; location?: Location };
+
+// Control flow
+export type IfStmt          = { kind: "if";              condition: CondExpr; then: Stmt[]; else: Stmt[]; location?: Location };
+export type ForEachStmt     = { kind: "for_each";        variable: string; collection: Expr; body: Stmt[]; location?: Location };
+export type RepeatStmt      = { kind: "repeat";          count: number; body: Stmt[]; location?: Location };
+export type WhileStmt       = { kind: "while";           condition: CondExpr; body: Stmt[]; location?: Location };
+export type BreakStmt       = { kind: "break";           location?: Location };
+export type ContinueStmt    = { kind: "continue";        location?: Location };
+export type LogStmt         = { kind: "log";             value: Expr; location?: Location };
+export type FailStmt        = { kind: "fail";            message: string; location?: Location };
+export type CompoundAssign  = { kind: "compound_assign"; variable: string; op: string; value: Expr; location?: Location };
+
 export type Stmt =
   | NavigateStmt
   | ClickStmt
@@ -125,7 +170,24 @@ export type Stmt =
   | LoadExcelStmt
   | UploadFileStmt
   | ReportStmt
-  | ReturnStmt;
+  | ReturnStmt
+  | GenStmt
+  | GenCodeStmt
+  | SetCookiesStmt
+  | LoadExcelAllStmt
+  | ReadPdfStmt
+  | OcrImageStmt
+  | ReadFileStmt
+  | ReadGdocStmt
+  | IfStmt
+  | ForEachStmt
+  | RepeatStmt
+  | WhileStmt
+  | BreakStmt
+  | ContinueStmt
+  | LogStmt
+  | FailStmt
+  | CompoundAssign;
 
 // ── Top-level declarations ───────────────────────────────────────────────────
 
@@ -142,7 +204,7 @@ export type FunctionDef = {
   location?: Location;
 };
 
-export type TopLevel = TypeDef | TopLevelVar | FunctionDef;
+export type TopLevel = TypeDef | EnumTypeDef | TopLevelVar | FunctionDef;
 
 // ── Root ─────────────────────────────────────────────────────────────────────
 
