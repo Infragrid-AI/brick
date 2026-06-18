@@ -1,0 +1,107 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Physics Wallah — Doubt Resolution Triage
+//
+// Trigger: Continuous (runs on each new doubt submission)
+//
+// Purpose: Classify incoming student doubts, attempt AI auto-resolution,
+//          escalate to human teacher with full context if confidence is low.
+//
+// Inputs:  Doubt queue (question text, subject, student profile)
+// Outputs: AI answer or teacher assignment, resolution tracking, analytics
+// ─────────────────────────────────────────────────────────────────────────────
+
+main() {
+  // ── 1. Open the doubt queue ───────────────────────────────────────────────────
+  navigate "https://admin.physicswallah.live/doubts/queue"
+  ai "wait for the doubt queue to load — all pending unanswered doubts must be visible"
+  extract table "all pending doubts in the queue — include doubt id, student name, class/batch, subject, question text, time submitted, and any attached image" -> @doubt_queue
+
+  // ── 2. Classify each doubt ────────────────────────────────────────────────────
+  extract from @doubt_queue "for each doubt classify: subject (Physics/Chemistry/Math/Biology), chapter, topic, difficulty level (easy/medium/hard), and question type (conceptual/numerical/diagram-based)" -> @classified_doubts
+
+  extract from @doubt_queue "doubts that have been pending for more than 10 minutes" -> @aged_doubts
+
+  // ── 3. Attempt AI auto-resolution ────────────────────────────────────────────
+  navigate "https://admin.physicswallah.live/ai-tutor/answer"
+  ai "for each doubt in @classified_doubts attempt to generate an answer using the AI tutoring engine — return answer text, confidence score (0-100), and relevant source materials (chapter, page, video timestamp) for each doubt" -> @ai_answers
+
+  // ── 4. Separate high-confidence vs low-confidence answers ────────────────────
+  extract from @ai_answers "doubts where confidence score is 90 or higher" -> @auto_resolvable
+  extract from @ai_answers "doubts where confidence score is below 90" -> @needs_teacher
+
+  // ── 5. Publish AI answers for high-confidence doubts ─────────────────────────
+  navigate "https://admin.physicswallah.live/doubts/respond"
+  ai "for each doubt in @auto_resolvable post the AI-generated answer along with the source reference — mark each doubt as 'AI Resolved' in the system"
+  screenshot -> @ai_responses_posted
+
+  // ── 6. Assign low-confidence doubts to available teachers ────────────────────
+  navigate "https://admin.physicswallah.live/teacher-ops/availability"
+  extract table "teachers currently available for doubt resolution — include teacher name, subject expertise, and current workload (active doubts assigned)" -> @available_teachers
+
+  navigate "https://admin.physicswallah.live/doubts/assign"
+  ai "for each doubt in @needs_teacher match it to the most suitable available teacher from @available_teachers based on subject expertise and lowest current workload — assign the doubt and include the AI's best attempt answer and source materials as context for the teacher"
+  screenshot -> @teacher_assignments
+
+  // ── 7. Escalate aged doubts that still have no teacher ───────────────────────
+  extract from @needs_teacher "doubts that are also in @aged_doubts and still unassigned after step 6" -> @critical_aged
+
+  ai "for each doubt in @critical_aged: escalate to a senior teacher or subject expert — send an urgent Slack/WhatsApp notification with the question text and student details, set SLA to 10 minutes"
+
+  // ── 8. Track teacher response SLA on previously assigned doubts ──────────────
+  navigate "https://admin.physicswallah.live/doubts/in-progress"
+  extract table "doubts assigned to teachers more than 30 minutes ago with no response" -> @sla_breached
+
+  ai "for each doubt in @sla_breached: reassign to a different available teacher from @available_teachers, notify the original teacher that the doubt was reassigned due to SLA breach, and flag the breach in the teacher performance log"
+
+  // ── 9. Build resolution analytics ────────────────────────────────────────────
+  extract from @classified_doubts "count of doubts grouped by subject and topic" -> @topic_frequency
+  extract from @ai_answers "average confidence score by subject" -> @ai_accuracy_by_subject
+  extract from @ai_answers "topics where AI confidence is consistently below 70%" — these are gaps in the AI model -> @ai_weak_topics
+
+  // ── 10. Save data ────────────────────────────────────────────────────────────
+  save @topic_frequency as "doubt_topic_frequency"
+  save @ai_weak_topics as "ai_model_gap_topics"
+  save @sla_breached as "sla_breach_log"
+
+  // ── 11. Generate resolution report ───────────────────────────────────────────
+  report title: "PW Doubt Resolution Triage Report" {
+    ## Queue Summary
+    Total doubts processed:
+    @doubt_queue
+
+    Classified by subject and type:
+    @classified_doubts
+
+    ## AI Resolution
+    Auto-resolved (confidence ≥ 90%):
+    @auto_resolvable
+
+    Sample AI answers posted:
+    @ai_responses_posted
+
+    AI accuracy by subject:
+    @ai_accuracy_by_subject
+
+    ## Teacher Assignment
+    Doubts routed to teachers (confidence < 90%):
+    @needs_teacher
+
+    Teacher assignments made:
+    @teacher_assignments
+
+    ## Escalations
+    Critical aged doubts escalated:
+    @critical_aged
+
+    SLA breaches re-assigned:
+    @sla_breached
+
+    ## AI Model Gaps (Topics to Improve)
+    Topics where AI confidence is persistently low:
+    @ai_weak_topics
+
+    ---
+    Auto-resolve threshold: confidence ≥ 90%
+    Teacher SLA: 30 min | Escalation SLA: 10 min (aged doubts)
+  }
+}

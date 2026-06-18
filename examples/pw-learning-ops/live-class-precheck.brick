@@ -1,0 +1,105 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Physics Wallah — Live Class Pre-Flight Check
+//
+// Trigger: 30 minutes before every scheduled live class
+//
+// Purpose: Verify all systems are go before a class begins. Auto-remediate
+//          common failures. Escalate to ops if unresolvable.
+//
+// Inputs:  Class schedule, teacher status, streaming infrastructure state
+// Outputs: Go/No-go status, auto-fixes applied, ops alert if needed
+// ─────────────────────────────────────────────────────────────────────────────
+
+main() {
+  // ── 1. Load today's class schedule ───────────────────────────────────────────
+  navigate "https://admin.physicswallah.live/classes/schedule/today"
+  ai "wait for the full schedule to load — all upcoming classes within the next 60 minutes must be visible"
+  extract table "all classes scheduled to start within the next 60 minutes — include class id, subject, teacher name, batch size, stream URL" -> @upcoming_classes
+
+  // ── 2. Verify teacher online status ──────────────────────────────────────────
+  navigate "https://admin.physicswallah.live/teacher-ops/status"
+  extract from @upcoming_classes "teacher names for classes starting in the next 30 minutes" -> @teachers_needed
+
+  ai "check online status for each teacher in @teachers_needed — mark each as online, offline, or no-signal" -> @teacher_status
+
+  extract from @teacher_status "teachers marked offline or no-signal" -> @offline_teachers
+
+  // If any teacher is offline — trigger backup protocol
+  ai "for each teacher in @offline_teachers: send an urgent WhatsApp ping 'Your class starts in 30 minutes. Please confirm you are online and ready.'"
+
+  // ── 3. Verify streaming infrastructure ───────────────────────────────────────
+  navigate "https://admin.physicswallah.live/infrastructure/streams"
+  ai "run a health check on the streaming endpoints for all classes in @upcoming_classes — confirm bitrate > 2500 kbps, latency < 500ms, recording enabled" -> @stream_health
+
+  extract from @stream_health "streams with bitrate below 2500 kbps or latency above 500ms" -> @degraded_streams
+
+  // Auto-remediate degraded streams
+  ai "for each stream in @degraded_streams: trigger a stream restart via the admin panel restart button — wait 15 seconds, then re-check health" -> @remediation_result
+
+  screenshot -> @infrastructure_state
+
+  // ── 4. Verify class materials are uploaded ────────────────────────────────────
+  navigate "https://admin.physicswallah.live/content/class-materials"
+  extract from @upcoming_classes "class ids for classes starting in 30 minutes" -> @class_ids
+
+  ai "for each class in @class_ids verify that at least one PDF or slide deck has been uploaded for today's session — flag any class with no materials" -> @material_check
+
+  extract from @material_check "classes with no materials uploaded" -> @missing_materials
+
+  // ── 5. Verify student batch notifications were sent ───────────────────────────
+  navigate "https://admin.physicswallah.live/notifications/sent"
+  ai "confirm that reminder notifications were sent in the last 2 hours for each class in @upcoming_classes — flag any class where reminders were not sent" -> @notification_status
+
+  extract from @notification_status "classes where reminders were not sent" -> @unnotified_classes
+
+  // Send missing reminders immediately
+  ai "for each class in @unnotified_classes send an immediate WhatsApp reminder to enrolled students: 'Your {{subject}} class starts in 30 minutes! Join on time 🎯'"
+
+  // ── 6. Build go/no-go status ─────────────────────────────────────────────────
+  extract from @teacher_status "count of online vs offline teachers" -> @teacher_readiness
+  extract from @stream_health "count of healthy vs degraded streams after remediation" -> @stream_readiness
+
+  // ── 7. Escalate if critical issues remain ────────────────────────────────────
+  navigate "https://admin.physicswallah.live/ops/alerts"
+  ai "if any teachers in @offline_teachers did not respond to the WhatsApp ping within 5 minutes, or if any streams in @degraded_streams failed to recover after restart, create a CRITICAL ops alert with full context from @infrastructure_state and notify the on-call operations engineer via phone call"
+
+  // ── 8. Save run record ───────────────────────────────────────────────────────
+  save @stream_health as "stream_health_preflight"
+  save @teacher_status as "teacher_readiness_preflight"
+
+  // ── 9. Generate pre-flight report ────────────────────────────────────────────
+  report title: "PW Live Class Pre-Flight Check" {
+    ## Upcoming Classes (Next 60 min)
+    @upcoming_classes
+
+    ## Teacher Readiness
+    @teacher_readiness
+
+    Offline at check time:
+    @offline_teachers
+
+    ## Streaming Infrastructure
+    @stream_readiness
+
+    Streams requiring remediation:
+    @degraded_streams
+
+    Remediation results:
+    @remediation_result
+
+    Infrastructure snapshot:
+    @infrastructure_state
+
+    ## Materials
+    Classes missing materials:
+    @missing_materials
+
+    ## Notification Status
+    Classes where reminders were resent:
+    @unnotified_classes
+
+    ---
+    Thresholds: bitrate > 2500 kbps | latency < 500ms | recording enabled
+    Run at: 30 min before class start
+  }
+}

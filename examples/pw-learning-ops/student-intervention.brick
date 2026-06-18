@@ -1,0 +1,97 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Physics Wallah — Daily Student Learning Intervention
+//
+// Trigger: Daily at 06:00 AM IST
+//
+// Purpose: Identify students falling behind, assign remediation content,
+//          notify students + parents, escalate chronic cases to teachers.
+//
+// Inputs:  Live PW admin dashboard (attendance, scores, assignment completion)
+// Outputs: Personalized assignments, WhatsApp/email notifications, report
+// ─────────────────────────────────────────────────────────────────────────────
+
+main() {
+  // ── 1. Open admin performance dashboard ──────────────────────────────────────
+  navigate "https://admin.physicswallah.live/analytics/performance"
+  ai "wait for the performance dashboard to fully load — all student rows and metric columns must be visible"
+  screenshot -> @dashboard_state
+
+  // ── 2. Pull at-risk students ──────────────────────────────────────────────────
+  // At-risk criteria: attendance < 60%  OR  assignment_completion < 50%
+  //                   OR  7-day test score trend is declining
+  extract table "all students flagged as at-risk: attendance below 60%, assignment completion below 50%, or declining test score trend over the past 7 days" -> @at_risk_students
+
+  extract from @at_risk_students "count flagged students grouped by subject batch — Physics, Chemistry, Mathematics, Biology" -> @risk_by_subject
+
+  // ── 3. Map each student's three weakest topics ────────────────────────────────
+  extract from @at_risk_students "for each student list their top 3 weakest topics ranked by score drop percentage, include student id and batch id" -> @weakness_map
+
+  // ── 4. Find remediation content for every weak topic ─────────────────────────
+  navigate "https://admin.physicswallah.live/content/library"
+  ai "for every unique topic in @weakness_map search the content library and return the single best remediation video and one practice set (DPP) per topic — prioritise content with highest completion and rating" -> @remediation_map
+
+  // ── 5. Create personalized batch assignments ──────────────────────────────────
+  navigate "https://admin.physicswallah.live/assignments/bulk-create"
+  ai "create one personalized assignment per student in @at_risk_students: attach the remediation videos and DPP from @remediation_map that match their weak topics from @weakness_map — set due date 48 hours from now, label each assignment 'Learning Intervention - [date]'"
+  screenshot -> @assignments_created
+
+  // ── 6. Send student notifications ─────────────────────────────────────────────
+  navigate "https://admin.physicswallah.live/notifications/compose"
+
+  fill "#message-body" with "Hi {{student_name}} 👋 Your teacher has prepared a personalised study plan for you. Complete today's assignment to get back on track — your batch teacher is rooting for you! Open PW app to start."
+  ai "send WhatsApp notifications to every student in @at_risk_students using the message template above — personalise the student name field for each recipient"
+  ai "also send the same message as an email to each student's registered email address in @at_risk_students"
+
+  // ── 7. Notify parents of chronic underperformers ──────────────────────────────
+  extract from @at_risk_students "students who have been continuously at-risk for 7 or more days" -> @chronic_cases
+
+  ai "send a separate parent alert WhatsApp message to the parent contact registered for each student in @chronic_cases — message: 'Dear Parent, your child {{student_name}} has shown a consistent drop in performance over the past week. Our teacher team is assigning extra support today. Please encourage them to complete their assignments. — PW Team'"
+
+  // ── 8. Escalate chronic cases to batch teachers ───────────────────────────────
+  navigate "https://admin.physicswallah.live/teacher-ops/escalations"
+  ai "create one escalation ticket per student in @chronic_cases — populate it with: student name, batch, weak topics from @weakness_map, attendance percentage, last 5 test scores — assign ticket to their batch teacher with priority HIGH"
+  screenshot -> @escalation_tickets
+
+  // ── 9. Save daily snapshot for trend tracking ─────────────────────────────────
+  save @at_risk_students as "at_risk_daily_snapshot"
+  save @risk_by_subject as "subject_risk_distribution"
+  save @weakness_map as "student_weakness_map"
+
+  // ── 10. Generate operations report ───────────────────────────────────────────
+  report title: "PW Daily Learning Intervention Report" {
+    ## At-Risk Summary
+
+    Students flagged today (by subject batch):
+    @risk_by_subject
+
+    ## Weakness Distribution
+
+    Top weak topics and affected students:
+    @weakness_map
+
+    ## Remediation Content Assigned
+
+    Videos and DPPs matched per topic:
+    @remediation_map
+
+    ## Assignments Created
+
+    @assignments_created
+
+    ## Chronic Cases Escalated to Teachers
+
+    Students at-risk for 7+ consecutive days:
+    @chronic_cases
+
+    Teacher escalation tickets:
+    @escalation_tickets
+
+    ## Dashboard State at Run Time
+
+    @dashboard_state
+
+    ---
+    Thresholds: Attendance < 60% | Assignment completion < 50% | Score drop > 20%
+    Next run: Tomorrow 06:00 AM IST
+  }
+}
