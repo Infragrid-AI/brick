@@ -87,6 +87,7 @@ interface BrickJson {
   version: string;
   description: string;
   entry: string;
+  output?: string;
   author: string;
   types?: string;
   compiler?: { strict?: boolean; target?: string };
@@ -219,7 +220,10 @@ program
       ? JSON.stringify(steps, null, 2)
       : JSON.stringify(steps);
 
-    const outPath = opts.out ?? absPath.replace(/\.brick$/, ".json");
+    // Resolve output path: CLI flag > brick.json "output" field > sibling .json next to entry
+    const outPath = opts.out
+      ?? (meta?.output ? path.resolve(meta.output) : null)
+      ?? absPath.replace(/\.brick$/, ".json");
     fs.writeFileSync(outPath, json, "utf8");
 
     const relOut = path.relative(process.cwd(), outPath);
@@ -284,28 +288,93 @@ program
 
 // ── brick new ────────────────────────────────────────────────────────────────
 
+const GLOBALS_DTS = `\
+// Globals injected by the Brick render_component HTML template.
+// React and ReactDOM are loaded via CDN — no npm install needed.
+
+declare namespace React {
+  type ReactNode = any;
+  type ReactElement = any;
+  type Key = string | number;
+  type CSSProperties = Record<string, string | number | undefined>;
+  type Ref<T> = { current: T | null };
+  type RefObject<T> = { current: T | null };
+  type MutableRefObject<T> = { current: T };
+  type Dispatch<A> = (value: A) => void;
+  type SetStateAction<S> = S | ((prevState: S) => S);
+  type FC<P = object> = (props: P & { children?: ReactNode }) => ReactElement | null;
+  type SyntheticEvent<T = Element> = any;
+  type MouseEvent<T = Element> = SyntheticEvent<T>;
+  type ChangeEvent<T = Element> = SyntheticEvent<T>;
+  type KeyboardEvent<T = Element> = SyntheticEvent<T>;
+  type FormEvent<T = Element> = SyntheticEvent<T>;
+  type FocusEvent<T = Element> = SyntheticEvent<T>;
+  interface Context<T> {
+    Provider: (props: { value: T; children?: ReactNode }) => ReactElement | null;
+    Consumer: (props: { children: (value: T) => ReactNode }) => ReactElement | null;
+  }
+  function useState<T>(initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>];
+  function useEffect(effect: () => void | (() => void), deps?: any[]): void;
+  function useLayoutEffect(effect: () => void | (() => void), deps?: any[]): void;
+  function useMemo<T>(factory: () => T, deps: any[]): T;
+  function useCallback<T extends (...args: any[]) => any>(fn: T, deps: any[]): T;
+  function useRef<T>(initial?: T): MutableRefObject<T | undefined>;
+  function useContext<T>(ctx: Context<T>): T;
+  function useReducer<S, A>(reducer: (state: S, action: A) => S, initial: S): [S, Dispatch<A>];
+  function useId(): string;
+  function createElement(type: any, props?: any, ...children: any[]): ReactElement;
+  function createContext<T>(defaultValue: T): Context<T>;
+  function cloneElement(element: ReactElement, props?: any, ...children: any[]): ReactElement;
+  function memo<T extends FC<any>>(c: T): T;
+  function forwardRef<T, P = object>(render: (props: P, ref: Ref<T>) => ReactElement | null): any;
+  function isValidElement(obj: any): obj is ReactElement;
+  const Fragment: any;
+  const Children: any;
+  interface HTMLAttributes<T = HTMLElement> { [key: string]: any; }
+  interface SVGAttributes<T = SVGElement> { [key: string]: any; }
+}
+
+declare const React: typeof React & { new(...args: any[]): any };
+
+declare const ReactDOM: {
+  createRoot(container: Element | null): { render(el: React.ReactElement): void; unmount(): void };
+  render(el: React.ReactElement, container: Element | null): void;
+};
+
+declare namespace JSX {
+  interface Element extends React.ReactElement {}
+  interface IntrinsicElements { [elem: string]: React.HTMLAttributes | React.SVGAttributes; }
+  interface IntrinsicAttributes { key?: React.Key; }
+}
+`;
+
 program
   .command("new [name]")
-  .description("Scaffold a new brick project: brick.json + src/main.brick")
+  .description("Scaffold a new brick project")
   .action((name = "project") => {
     const projectDir = path.resolve(name);
-    const srcDir = path.join(projectDir, "src");
+    const srcDir    = path.join(projectDir, "src");
+    const brickDir  = path.join(projectDir, ".brick");
 
     if (fs.existsSync(projectDir)) {
       console.error(`❌  Directory already exists: ${projectDir}`);
       process.exit(1);
     }
 
-    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(srcDir,   { recursive: true });
+    fs.mkdirSync(brickDir, { recursive: true });
 
-    const moduleName = name.charAt(0).toUpperCase() + name.slice(1).replace(/[-_]([a-z])/g, (_m: string, c: string) => c.toUpperCase());
+    const moduleName = name.charAt(0).toUpperCase()
+      + name.slice(1).replace(/[-_]([a-z])/g, (_m: string, c: string) => c.toUpperCase());
 
+    // brick.json — output goes to root main.json (not src/)
     const meta: BrickJson = {
       name,
       module: moduleName,
       version: "0.1.0",
       description: "",
       entry: "src/main.brick",
+      output: "main.json",
       author: "",
       types: "src/types.brick",
       compiler: { strict: true, target: "playwright" },
@@ -313,14 +382,61 @@ program
     };
     fs.writeFileSync(path.join(projectDir, "brick.json"), JSON.stringify(meta, null, 2) + "\n", "utf8");
 
-    const template = `module ${moduleName}\n\nfn main() {\n  // Start writing your automation here\n  navigate "https://example.com"\n  screenshot -> @snap\n  ai "Describe what you see on the page" -> @description\n}\n`;
-    fs.writeFileSync(path.join(srcDir, "main.brick"), template, "utf8");
-    fs.writeFileSync(path.join(srcDir, "types.brick"), `// Shared types for ${moduleName}\n// type MyType = { field: String }\n`, "utf8");
+    // tsconfig.json — covers src/ and .brick/ so globals.d.ts is always in scope
+    const tsconfig = {
+      compilerOptions: {
+        target: "ES2020",
+        lib: ["ES2020", "DOM", "DOM.Iterable"],
+        jsx: "react",
+        strict: false,
+        noEmit: true,
+        skipLibCheck: true,
+        allowJs: true,
+        resolveJsonModule: true,
+        moduleResolution: "node",
+        allowSyntheticDefaultImports: true,
+        esModuleInterop: true,
+        isolatedModules: true,
+      },
+      include: ["src/**/*", ".brick/**/*.d.ts"],
+    };
+    fs.writeFileSync(path.join(projectDir, "tsconfig.json"), JSON.stringify(tsconfig, null, 2) + "\n", "utf8");
 
-    console.log(`✅  Created ${name}/`);
-    console.log(`    brick.json`);
-    console.log(`    src/main.brick`);
-    console.log(`\n  Run: cd ${name} && brick build`);
+    // .brick/globals.d.ts — CDN globals, never needs editing by the author
+    fs.writeFileSync(path.join(brickDir, "globals.d.ts"), GLOBALS_DTS, "utf8");
+
+    // src/main.brick
+    const template = [
+      `module ${moduleName}`,
+      ``,
+      `fn main() {`,
+      `  // Start writing your automation here`,
+      `  navigate "https://example.com"`,
+      `  screenshot -> @snap`,
+      `  ai "Describe what you see on the page" -> @description`,
+      `}`,
+      ``,
+    ].join("\n");
+    fs.writeFileSync(path.join(srcDir, "main.brick"), template, "utf8");
+
+    // src/types.brick
+    fs.writeFileSync(
+      path.join(srcDir, "types.brick"),
+      `// Shared types for ${moduleName}\n// type MyType = { field: String }\n`,
+      "utf8",
+    );
+
+    console.log();
+    console.log(c.green(c.bold(`  ✓  Created ${name}/`)));
+    console.log();
+    console.log(`  ${c.dim("brick.json")}          project config`);
+    console.log(`  ${c.dim("tsconfig.json")}        TypeScript config for .tsx report files`);
+    console.log(`  ${c.dim(".brick/globals.d.ts")}   CDN global types (React, ReactDOM)`);
+    console.log(`  ${c.dim("src/main.brick")}        entry point`);
+    console.log(`  ${c.dim("src/types.brick")}       shared type definitions`);
+    console.log();
+    console.log(`  Run: ${c.cyan(`cd ${name} && brick build`)}`);
+    console.log();
   });
 
 // ── CLI entry ─────────────────────────────────────────────────────────────────

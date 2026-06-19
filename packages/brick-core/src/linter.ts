@@ -149,13 +149,18 @@ function lintStmt(stmt: Stmt, scope: Set<string>, diags: Diagnostic[]): void {
       scope.add(stmt.variable);
       break;
 
-    case "read_file":
+    case "open_file":
       checkExpr(stmt.source, scope, diags, loc);
       scope.add(stmt.variable);
       break;
 
     case "read_gdoc":
       checkExpr(stmt.url, scope, diags, loc);
+      scope.add(stmt.variable);
+      break;
+
+    case "load_sheet":
+      checkExpr(stmt.name, scope, diags, loc);
       scope.add(stmt.variable);
       break;
 
@@ -209,6 +214,15 @@ function lintStmt(stmt: Stmt, scope: Set<string>, diags: Diagnostic[]): void {
       break;
     }
 
+    case "pfor": {
+      checkExpr(stmt.collection, scope, diags, loc);
+      const pforScope = new Set(scope);
+      pforScope.add(stmt.variable);
+      lintBody(stmt.body, pforScope, diags);
+      if (stmt.outputVar) scope.add(stmt.outputVar);
+      break;
+    }
+
     case "repeat":
       lintBody(stmt.body, new Set(scope), diags);
       break;
@@ -231,23 +245,11 @@ function lintStmt(stmt: Stmt, scope: Set<string>, diags: Diagnostic[]): void {
 
     // ── Other ────────────────────────────────────────────────────────────────
 
-    case "save_table":
-      if (!scope.has(stmt.variable)) {
-        diags.push({
-          severity: "error",
-          message: `Variable @${stmt.variable} is not defined`,
-          line: loc?.start.line,
-        });
-      }
-      if (!stmt.name.trim()) {
-        diags.push({ severity: "error", message: "save_table requires a non-empty name", line: loc?.start.line });
-      }
-      break;
-
     case "js_block":
       if (!stmt.code.trim()) {
         diags.push({ severity: "warning", message: "js block is empty", line: loc?.start.line });
       }
+      checkCodeRefs(stmt.code, scope, diags, loc, "js");
       if (stmt.variable) scope.add(stmt.variable);
       break;
 
@@ -255,6 +257,7 @@ function lintStmt(stmt: Stmt, scope: Set<string>, diags: Diagnostic[]): void {
       if (!stmt.code.trim()) {
         diags.push({ severity: "warning", message: "python block is empty", line: loc?.start.line });
       }
+      checkCodeRefs(stmt.code, scope, diags, loc, "py");
       if (stmt.variable) scope.add(stmt.variable);
       break;
 
@@ -273,9 +276,37 @@ function lintStmt(stmt: Stmt, scope: Set<string>, diags: Diagnostic[]): void {
       checkExpr(stmt.title, scope, diags, loc);
       break;
 
+    case "render_file":
+      checkExpr(stmt.data, scope, diags, loc);
+      if (stmt.variable) scope.add(stmt.variable);
+      break;
+
     case "return":
       checkExpr(stmt.value, scope, diags, loc);
       break;
+  }
+}
+
+// Scan raw JS or Python code text for @var references and verify each is in scope.
+// Skips Python decorators (@name followed by `(`) — same rule as the runtime substitution.
+function checkCodeRefs(
+  code: string,
+  scope: Set<string>,
+  diags: Diagnostic[],
+  loc: Location | undefined,
+  lang: "js" | "py",
+): void {
+  const re = /@([A-Za-z_]\w*)(?!\s*\()/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(code)) !== null) {
+    const name = m[1];
+    if (!scope.has(name)) {
+      diags.push({
+        severity: "error",
+        message: `Variable @${name} is used inside a ${lang === "js" ? "js" : "python"} block but is not defined at this point`,
+        line: loc?.start.line,
+      });
+    }
   }
 }
 

@@ -191,7 +191,9 @@ export async function signInWithEmail(
   const port = await getFreePort();
   const callbackUrl = `http://localhost:${port}/callback`;
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { flowType: "implicit" },
+  });
 
   // Start listening BEFORE sending the email so we don't miss the redirect
   const serverPromise = startCallbackServer(port);

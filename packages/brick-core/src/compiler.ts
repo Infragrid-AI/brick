@@ -17,7 +17,6 @@ export type RunbookStep =
   | { type: "screenshot";      variable: string }
   | { type: "extract_table";   description: string; variable: string; output_schema?: AnyObj; output_schema_wrap?: string }
   | { type: "set_variable";    variable: string; value: string }
-  | { type: "store_table";     variable: string; name: string }
   | { type: "extract";         source: string; query: string; variable: string }
   | { type: "write_docx";      title: string; content: string }
   | { type: "js_block";        code: string; variable: string }
@@ -30,7 +29,7 @@ export type RunbookStep =
   | { type: "break" }
   | { type: "continue" }
   | { type: "if";              condition: AnyObj; then: RunbookStep[]; else: RunbookStep[] }
-  | { type: "for_each";        variable: string; collection: string; body: RunbookStep[] }
+  | { type: "for_each";        variable: string; collection: string; body: RunbookStep[]; parallel?: boolean; outputVar?: string; batchSize?: number }
   | { type: "repeat";          count: number; body: RunbookStep[] }
   | { type: "while";           condition: AnyObj; body: RunbookStep[] }
   | { type: "gen_primitive";   prompt: string; model?: string; variable?: string; output_schema?: AnyObj; output_schema_wrap?: string }
@@ -40,8 +39,10 @@ export type RunbookStep =
   | { type: "read_pdf";        source: string; variable: string }
   | { type: "read_pdf_pages";  source: string; variable: string }
   | { type: "ocr_image";       source: string; variable: string }
-  | { type: "read_file";       source: string; filename?: string; variable: string }
-  | { type: "read_gdoc";       url: string; variable: string };
+  | { type: "open_file";       source: string; filename?: string; variable: string }
+  | { type: "read_gdoc";       url: string; variable: string }
+  | { type: "load_sheet";      name: string; variable: string }
+  | { type: "render_component"; file: string; data: string; variable: string };
 
 export type CompileResult = {
   steps: RunbookStep[];
@@ -85,7 +86,7 @@ function resolveExprValue(expr: Expr): unknown {
   }
 }
 
-function compileStmt(stmt: Stmt, errors: CompileError[], typeDefs: TypeDefMap = new Map()): RunbookStep | null {
+function compileStmt(stmt: Stmt, errors: CompileError[], typeDefs: TypeDefMap = new Map(), tableVars: Map<string, VarKind> = new Map()): RunbookStep | null {
   switch (stmt.kind) {
     case "navigate":
       return { type: "navigate", url: resolveExpr(stmt.url) };
@@ -141,11 +142,8 @@ function compileStmt(stmt: Stmt, errors: CompileError[], typeDefs: TypeDefMap = 
       };
     }
 
-    case "save_table":
-      return { type: "store_table", variable: stmt.variable, name: stmt.name };
-
     case "extract":
-      return { type: "extract", source: stmt.source, query: stmt.query, variable: stmt.variable };
+      return { type: "gen_primitive", prompt: `${stmt.query}\n\nData: @${stmt.source}`, variable: stmt.variable };
 
     case "js_block":
       return { type: "js_block", code: stmt.code, variable: stmt.variable ?? "" };
@@ -171,6 +169,11 @@ function compileStmt(stmt: Stmt, errors: CompileError[], typeDefs: TypeDefMap = 
 
     case "report":
       return { type: "write_docx", title: resolveExpr(stmt.title), content: stmt.content };
+
+    case "render_file": {
+      const s = stmt as AnyObj;
+      return { type: "render_component", file: s.file, data: resolveExpr(s.data), variable: s.variable ?? "" };
+    }
 
     case "return":
       return null;
@@ -210,11 +213,13 @@ function compileStmt(stmt: Stmt, errors: CompileError[], typeDefs: TypeDefMap = 
     case "ocr_image":
       return { type: "ocr_image", source: resolveExpr(stmt.source), variable: stmt.variable };
 
-    case "read_file":
-      return { type: "read_file", source: resolveExpr(stmt.source), filename: stmt.filename, variable: stmt.variable };
+    case "open_file":
+      return { type: "open_file", source: resolveExpr(stmt.source), filename: stmt.filename, variable: stmt.variable };
 
     case "read_gdoc":
       return { type: "read_gdoc", url: resolveExpr(stmt.url), variable: stmt.variable };
+    case "load_sheet":
+      return { type: "load_sheet", name: resolveExpr(stmt.name), variable: stmt.variable };
 
     case "if": {
       const s = stmt as AnyObj;
@@ -229,6 +234,20 @@ function compileStmt(stmt: Stmt, errors: CompileError[], typeDefs: TypeDefMap = 
     case "for_each": {
       const s = stmt as AnyObj;
       return { type: "for_each", variable: s.variable, collection: resolveExpr(s.collection), body: compileBody(s.body, errors, typeDefs) };
+    }
+
+    case "pfor": {
+      const s = stmt as AnyObj;
+      const step: RunbookStep = {
+        type: "for_each",
+        parallel: true,
+        variable: s.variable,
+        collection: resolveExpr(s.collection),
+        outputVar: s.outputVar ?? "",
+        body: compileBody(s.body, errors, typeDefs),
+      } as RunbookStep;
+      if (s.batchSize != null) (step as AnyObj).batchSize = s.batchSize;
+      return step;
     }
 
     case "repeat": {
@@ -320,9 +339,48 @@ function buildOutputSchema(ann: TypeAnnotation, defs: TypeDefMap): { schema: Any
   };
 }
 
-function compileBody(stmts: Stmt[], errors: CompileError[] = [], typeDefs: TypeDefMap = new Map()): RunbookStep[] {
+// Variable kinds tracked at compile time for type-safety checks.
+type VarKind = "table" | "text" | "image" | "unknown";
+
+function trackVarKind(step: RunbookStep | null, tableVars: Map<string, VarKind>): void {
+  if (!step) return;
+  switch (step.type) {
+    case "extract_table":
+    case "excel_to_csv":
+    case "excel_to_csvs":
+      tableVars.set(step.variable, "table");
+      break;
+    case "set_variable": {
+      // Arrays serialized as JSON are table-compatible
+      const trimmed = step.value.trim();
+      tableVars.set(step.variable, trimmed.startsWith("[") ? "table" : "text");
+      break;
+    }
+    case "screenshot":
+      if (step.variable) tableVars.set(step.variable, "image");
+      break;
+    case "extract":
+      tableVars.set(step.variable, "text");
+      break;
+    case "action":
+      if (step.variable) tableVars.set(step.variable, "unknown");
+      break;
+    case "js_block":
+    case "py_block":
+    case "gen_primitive":
+    case "gen_with_code":
+      if (step.variable) tableVars.set(step.variable, "unknown");
+      break;
+    default:
+      break;
+  }
+}
+
+function compileBody(stmts: Stmt[], errors: CompileError[] = [], typeDefs: TypeDefMap = new Map(), tableVars?: Map<string, VarKind>): RunbookStep[] {
+  const vars = tableVars ?? new Map<string, VarKind>();
   return stmts.flatMap(s => {
-    const step = compileStmt(s, errors, typeDefs);
+    const step = compileStmt(s, errors, typeDefs, vars);
+    trackVarKind(step, vars);
     return step ? [step] : [];
   });
 }
@@ -331,6 +389,7 @@ export function compile(ast: BrickFile): CompileResult {
   const errors: CompileError[] = [];
   const topLevelVars: Record<string, unknown> = {};
   const typeDefs: TypeDefMap = new Map();
+  const tableVars = new Map<string, VarKind>();
   let entryFunction: FunctionDef | undefined;
 
   // Collect top-level vars
@@ -354,7 +413,8 @@ export function compile(ast: BrickFile): CompileResult {
 
   const steps: RunbookStep[] = [];
   for (const stmt of entryFunction.body) {
-    const step = compileStmt(stmt, errors, typeDefs);
+    const step = compileStmt(stmt, errors, typeDefs, tableVars);
+    trackVarKind(step, tableVars);
     if (step) steps.push(step);
   }
 

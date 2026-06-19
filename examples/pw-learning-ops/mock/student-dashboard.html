@@ -3,313 +3,162 @@
 <head>
 <meta charset="UTF-8" />
 <title>PW Admin — Student Performance</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, sans-serif; font-size: 13px; background: #f8f9fa; }
+header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+header h1 { font-size: 14px; font-weight: 600; color: #111; }
+header span { font-size: 11px; color: #9ca3af; }
+.notice { background: #fff7ed; border: 1px solid #fed7aa; padding: 6px 12px; font-size: 11px; color: #92400e; margin: 8px; border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+thead th { background: #f9fafb; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid #f3f4f6; }
+tbody td { padding: 7px 10px; color: #374151; }
+tbody tr.risk { background: #fef2f2; }
+tbody tr.warn { background: #fefce8; }
+.badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+.badge-risk { background: #fee2e2; color: #b91c1c; }
+.badge-warn { background: #fef9c3; color: #92400e; }
+.badge-ok   { background: #dcfce7; color: #15803d; }
+.red { color: #dc2626; font-weight: 600; }
+.yellow { color: #ca8a04; font-weight: 600; }
+.green { color: #16a34a; }
+.gray  { color: #9ca3af; }
+</style>
 </head>
-<body class="bg-gray-50 font-sans text-sm">
+<body>
+<header>
+  <h1>Physics Wallah Admin — Student Performance Dashboard</h1>
+  <span>Run: 2026-06-17 &nbsp;·&nbsp; JEE/NEET Batch 2026 &nbsp;·&nbsp; 18 students &nbsp;·&nbsp; 5 At Risk · 4 Warning · 9 On Track</span>
+</header>
+<div class="notice">Thresholds — At Risk: Attendance &lt; 60% OR Assignment Completion &lt; 50% OR Test Score drop &gt; 20 pts in 7 days &nbsp;|&nbsp; Warning: one metric below threshold</div>
 
-<!-- Header -->
-<div class="bg-white border-b px-6 py-3 flex items-center justify-between">
-  <div class="flex items-center gap-3">
-    <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-xs">PW</div>
-    <span class="font-semibold text-gray-800">Physics Wallah Admin</span>
-    <span class="text-gray-300 mx-1">|</span>
-    <span class="text-gray-500">Performance Analytics</span>
-  </div>
-  <div class="text-xs text-gray-400">Run date: 2026-06-17 &nbsp;·&nbsp; JEE Batch 2026</div>
-</div>
-
-<!-- Summary Cards -->
-<div class="px-6 py-4 grid grid-cols-4 gap-4">
-  <div class="bg-white rounded-xl border p-4">
-    <p class="text-xs text-gray-500 uppercase tracking-wide">Total Students</p>
-    <p class="text-2xl font-bold text-gray-800 mt-1">18</p>
-  </div>
-  <div class="bg-red-50 rounded-xl border border-red-200 p-4">
-    <p class="text-xs text-red-500 uppercase tracking-wide font-medium">At Risk</p>
-    <p class="text-2xl font-bold text-red-600 mt-1">5</p>
-    <p class="text-xs text-red-400 mt-1">Below threshold on 2+ metrics</p>
-  </div>
-  <div class="bg-yellow-50 rounded-xl border border-yellow-200 p-4">
-    <p class="text-xs text-yellow-600 uppercase tracking-wide font-medium">Warning</p>
-    <p class="text-2xl font-bold text-yellow-600 mt-1">4</p>
-    <p class="text-xs text-yellow-500 mt-1">Below threshold on 1 metric</p>
-  </div>
-  <div class="bg-green-50 rounded-xl border border-green-200 p-4">
-    <p class="text-xs text-green-600 uppercase tracking-wide font-medium">On Track</p>
-    <p class="text-2xl font-bold text-green-600 mt-1">9</p>
-  </div>
-</div>
-
-<!-- Thresholds notice -->
-<div class="px-6 pb-3">
-  <div class="bg-orange-50 border border-orange-200 rounded-lg px-4 py-2 text-xs text-orange-700">
-    Thresholds — At Risk: Attendance &lt; 60% <strong>or</strong> Assignment Completion &lt; 50% <strong>or</strong> Test Score drop &gt; 20 pts in 7 days &nbsp;·&nbsp; Warning: one metric below threshold
-  </div>
-</div>
-
-<!-- Student Table -->
-<div class="px-6 pb-8">
-  <div class="bg-white rounded-xl border overflow-hidden">
-    <table class="w-full text-sm" id="student-table">
-      <thead class="bg-gray-50 border-b">
-        <tr class="text-left text-xs text-gray-500 uppercase tracking-wide">
-          <th class="px-4 py-3">Student ID</th>
-          <th class="px-4 py-3">Name</th>
-          <th class="px-4 py-3">Subject Batch</th>
-          <th class="px-4 py-3">Teacher</th>
-          <th class="px-4 py-3">Attendance %</th>
-          <th class="px-4 py-3">Assignment Completion %</th>
-          <th class="px-4 py-3">Last Test Score</th>
-          <th class="px-4 py-3">7-Day Trend</th>
-          <th class="px-4 py-3">Days At Risk</th>
-          <th class="px-4 py-3">Status</th>
-          <th class="px-4 py-3">Weakest Topic</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y">
-        <!-- AT RISK (red) -->
-        <tr class="bg-red-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-041</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Arjun Sharma</td>
-          <td class="px-4 py-3">Physics — JEE Adv</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Rajiv Kumar</td>
-          <td class="px-4 py-3 text-red-600 font-medium">48%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">38%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">34 / 100</td>
-          <td class="px-4 py-3 text-red-500">↓ −22 pts</td>
-          <td class="px-4 py-3 text-red-600 font-bold">9</td>
-          <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold">At Risk</span></td>
-          <td class="px-4 py-3 text-gray-600">Electromagnetism</td>
-        </tr>
-        <tr class="bg-red-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-017</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Priya Nair</td>
-          <td class="px-4 py-3">Chemistry — JEE Adv</td>
-          <td class="px-4 py-3 text-gray-500">Ms. Deepa Menon</td>
-          <td class="px-4 py-3 text-red-600 font-medium">52%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">41%</td>
-          <td class="px-4 py-3 text-yellow-600 font-medium">56 / 100</td>
-          <td class="px-4 py-3 text-red-500">↓ −18 pts</td>
-          <td class="px-4 py-3 text-red-600 font-bold">12</td>
-          <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold">At Risk</span></td>
-          <td class="px-4 py-3 text-gray-600">Organic Chemistry</td>
-        </tr>
-        <tr class="bg-red-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-089</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Rahul Gupta</td>
-          <td class="px-4 py-3">Mathematics — JEE Adv</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Sanjay Verma</td>
-          <td class="px-4 py-3 text-yellow-600 font-medium">61%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">29%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">41 / 100</td>
-          <td class="px-4 py-3 text-red-500">↓ −27 pts</td>
-          <td class="px-4 py-3 text-red-600 font-bold">7</td>
-          <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold">At Risk</span></td>
-          <td class="px-4 py-3 text-gray-600">Integral Calculus</td>
-        </tr>
-        <tr class="bg-red-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-053</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Sneha Pillai</td>
-          <td class="px-4 py-3">Biology — NEET</td>
-          <td class="px-4 py-3 text-gray-500">Dr. Anita Rao</td>
-          <td class="px-4 py-3 text-red-600 font-medium">44%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">35%</td>
-          <td class="px-4 py-3 text-yellow-600 font-medium">58 / 100</td>
-          <td class="px-4 py-3 text-red-500">↓ −21 pts</td>
-          <td class="px-4 py-3 text-red-600 font-bold">14</td>
-          <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold">At Risk</span></td>
-          <td class="px-4 py-3 text-gray-600">Cell Biology</td>
-        </tr>
-        <tr class="bg-red-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-102</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Vikram Iyer</td>
-          <td class="px-4 py-3">Physics — JEE Main</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Rajiv Kumar</td>
-          <td class="px-4 py-3 text-red-600 font-medium">55%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">44%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">38 / 100</td>
-          <td class="px-4 py-3 text-red-500">↓ −24 pts</td>
-          <td class="px-4 py-3 text-orange-500 font-bold">4</td>
-          <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold">At Risk</span></td>
-          <td class="px-4 py-3 text-gray-600">Thermodynamics</td>
-        </tr>
-
-        <!-- WARNING (yellow) -->
-        <tr class="bg-yellow-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-031</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Kiran Reddy</td>
-          <td class="px-4 py-3">Chemistry — JEE Main</td>
-          <td class="px-4 py-3 text-gray-500">Ms. Deepa Menon</td>
-          <td class="px-4 py-3 text-yellow-600 font-medium">63%</td>
-          <td class="px-4 py-3 text-yellow-600 font-medium">52%</td>
-          <td class="px-4 py-3 text-yellow-600 font-medium">61 / 100</td>
-          <td class="px-4 py-3 text-yellow-500">↓ −12 pts</td>
-          <td class="px-4 py-3 text-yellow-600 font-bold">3</td>
-          <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-semibold">Warning</span></td>
-          <td class="px-4 py-3 text-gray-600">Chemical Bonding</td>
-        </tr>
-        <tr class="bg-yellow-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-078</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Meera Joshi</td>
-          <td class="px-4 py-3">Mathematics — JEE Main</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Sanjay Verma</td>
-          <td class="px-4 py-3 text-green-600 font-medium">74%</td>
-          <td class="px-4 py-3 text-red-600 font-medium">47%</td>
-          <td class="px-4 py-3 text-green-600 font-medium">69 / 100</td>
-          <td class="px-4 py-3 text-gray-400">→ stable</td>
-          <td class="px-4 py-3 text-yellow-600 font-bold">2</td>
-          <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-semibold">Warning</span></td>
-          <td class="px-4 py-3 text-gray-600">Coordinate Geometry</td>
-        </tr>
-        <tr class="bg-yellow-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-006</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Aditya Singh</td>
-          <td class="px-4 py-3">Physics — JEE Adv</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Rajiv Kumar</td>
-          <td class="px-4 py-3 text-red-600 font-medium">57%</td>
-          <td class="px-4 py-3 text-green-600 font-medium">71%</td>
-          <td class="px-4 py-3 text-green-600 font-medium">72 / 100</td>
-          <td class="px-4 py-3 text-green-500">↑ +4 pts</td>
-          <td class="px-4 py-3 text-yellow-600 font-bold">1</td>
-          <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-semibold">Warning</span></td>
-          <td class="px-4 py-3 text-gray-600">Optics</td>
-        </tr>
-        <tr class="bg-yellow-50">
-          <td class="px-4 py-3 text-gray-500">PW-2026-115</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Pooja Agarwal</td>
-          <td class="px-4 py-3">Biology — NEET</td>
-          <td class="px-4 py-3 text-gray-500">Dr. Anita Rao</td>
-          <td class="px-4 py-3 text-green-600 font-medium">68%</td>
-          <td class="px-4 py-3 text-yellow-600 font-medium">54%</td>
-          <td class="px-4 py-3 text-yellow-600 font-medium">63 / 100</td>
-          <td class="px-4 py-3 text-yellow-500">↓ −9 pts</td>
-          <td class="px-4 py-3 text-yellow-600 font-bold">2</td>
-          <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-semibold">Warning</span></td>
-          <td class="px-4 py-3 text-gray-600">Genetics</td>
-        </tr>
-
-        <!-- ON TRACK (normal) -->
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-022</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Rohan Kapoor</td>
-          <td class="px-4 py-3">Physics — JEE Adv</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Rajiv Kumar</td>
-          <td class="px-4 py-3 text-green-600">88%</td>
-          <td class="px-4 py-3 text-green-600">91%</td>
-          <td class="px-4 py-3 text-green-600">84 / 100</td>
-          <td class="px-4 py-3 text-green-500">↑ +6 pts</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-067</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Ananya Krishnan</td>
-          <td class="px-4 py-3">Chemistry — JEE Adv</td>
-          <td class="px-4 py-3 text-gray-500">Ms. Deepa Menon</td>
-          <td class="px-4 py-3 text-green-600">92%</td>
-          <td class="px-4 py-3 text-green-600">88%</td>
-          <td class="px-4 py-3 text-green-600">79 / 100</td>
-          <td class="px-4 py-3 text-green-500">↑ +11 pts</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-009</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Dev Patel</td>
-          <td class="px-4 py-3">Mathematics — JEE Adv</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Sanjay Verma</td>
-          <td class="px-4 py-3 text-green-600">81%</td>
-          <td class="px-4 py-3 text-green-600">77%</td>
-          <td class="px-4 py-3 text-green-600">88 / 100</td>
-          <td class="px-4 py-3 text-green-500">↑ +3 pts</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-044</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Isha Mehta</td>
-          <td class="px-4 py-3">Biology — NEET</td>
-          <td class="px-4 py-3 text-gray-500">Dr. Anita Rao</td>
-          <td class="px-4 py-3 text-green-600">85%</td>
-          <td class="px-4 py-3 text-green-600">93%</td>
-          <td class="px-4 py-3 text-green-600">91 / 100</td>
-          <td class="px-4 py-3 text-green-500">↑ +8 pts</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-091</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Nikhil Bose</td>
-          <td class="px-4 py-3">Chemistry — NEET</td>
-          <td class="px-4 py-3 text-gray-500">Ms. Deepa Menon</td>
-          <td class="px-4 py-3 text-green-600">79%</td>
-          <td class="px-4 py-3 text-green-600">82%</td>
-          <td class="px-4 py-3 text-green-600">74 / 100</td>
-          <td class="px-4 py-3 text-gray-400">→ stable</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-033</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Tanvi Desai</td>
-          <td class="px-4 py-3">Mathematics — JEE Main</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Sanjay Verma</td>
-          <td class="px-4 py-3 text-green-600">76%</td>
-          <td class="px-4 py-3 text-green-600">68%</td>
-          <td class="px-4 py-3 text-green-600">71 / 100</td>
-          <td class="px-4 py-3 text-green-500">↑ +5 pts</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-058</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Siddharth Roy</td>
-          <td class="px-4 py-3">Physics — JEE Main</td>
-          <td class="px-4 py-3 text-gray-500">Mr. Rajiv Kumar</td>
-          <td class="px-4 py-3 text-green-600">83%</td>
-          <td class="px-4 py-3 text-green-600">75%</td>
-          <td class="px-4 py-3 text-green-600">77 / 100</td>
-          <td class="px-4 py-3 text-gray-400">→ stable</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-074</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Lakshmi Iyer</td>
-          <td class="px-4 py-3">Biology — NEET</td>
-          <td class="px-4 py-3 text-gray-500">Dr. Anita Rao</td>
-          <td class="px-4 py-3 text-green-600">90%</td>
-          <td class="px-4 py-3 text-green-600">86%</td>
-          <td class="px-4 py-3 text-green-600">82 / 100</td>
-          <td class="px-4 py-3 text-green-500">↑ +9 pts</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-        <tr>
-          <td class="px-4 py-3 text-gray-500">PW-2026-011</td>
-          <td class="px-4 py-3 font-medium text-gray-800">Harsh Tiwari</td>
-          <td class="px-4 py-3">Chemistry — JEE Main</td>
-          <td class="px-4 py-3 text-gray-500">Ms. Deepa Menon</td>
-          <td class="px-4 py-3 text-green-600">71%</td>
-          <td class="px-4 py-3 text-green-600">64%</td>
-          <td class="px-4 py-3 text-green-600">68 / 100</td>
-          <td class="px-4 py-3 text-gray-400">→ stable</td>
-          <td class="px-4 py-3 text-gray-400">0</td>
-          <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">On Track</span></td>
-          <td class="px-4 py-3 text-gray-400">—</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
+<table id="student-table">
+  <thead>
+    <tr>
+      <th>Student ID</th>
+      <th>Name</th>
+      <th>Subject Batch</th>
+      <th>Teacher</th>
+      <th>Attendance %</th>
+      <th>Assignment Completion %</th>
+      <th>Last Test Score</th>
+      <th>7-Day Trend</th>
+      <th>Days At Risk</th>
+      <th>Status</th>
+      <th>Weakest Topic</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="risk">
+      <td>PW-2026-041</td><td>Arjun Sharma</td><td>Physics — JEE Adv</td><td>Mr. Rajiv Kumar</td>
+      <td class="red">48%</td><td class="red">38%</td><td class="red">34 / 100</td>
+      <td class="red">↓ −22 pts</td><td class="red">9</td>
+      <td><span class="badge badge-risk">At Risk</span></td><td>Electromagnetism</td>
+    </tr>
+    <tr class="risk">
+      <td>PW-2026-017</td><td>Priya Nair</td><td>Chemistry — JEE Adv</td><td>Ms. Deepa Menon</td>
+      <td class="red">52%</td><td class="red">41%</td><td class="yellow">56 / 100</td>
+      <td class="red">↓ −18 pts</td><td class="red">12</td>
+      <td><span class="badge badge-risk">At Risk</span></td><td>Organic Chemistry</td>
+    </tr>
+    <tr class="risk">
+      <td>PW-2026-089</td><td>Rahul Gupta</td><td>Mathematics — JEE Adv</td><td>Mr. Sanjay Verma</td>
+      <td class="yellow">61%</td><td class="red">29%</td><td class="red">41 / 100</td>
+      <td class="red">↓ −27 pts</td><td class="red">7</td>
+      <td><span class="badge badge-risk">At Risk</span></td><td>Integral Calculus</td>
+    </tr>
+    <tr class="risk">
+      <td>PW-2026-053</td><td>Sneha Pillai</td><td>Biology — NEET</td><td>Dr. Anita Rao</td>
+      <td class="red">44%</td><td class="red">35%</td><td class="yellow">58 / 100</td>
+      <td class="red">↓ −21 pts</td><td class="red">14</td>
+      <td><span class="badge badge-risk">At Risk</span></td><td>Cell Biology</td>
+    </tr>
+    <tr class="risk">
+      <td>PW-2026-102</td><td>Vikram Iyer</td><td>Physics — JEE Main</td><td>Mr. Rajiv Kumar</td>
+      <td class="red">55%</td><td class="red">44%</td><td class="red">38 / 100</td>
+      <td class="red">↓ −24 pts</td><td class="yellow">4</td>
+      <td><span class="badge badge-risk">At Risk</span></td><td>Thermodynamics</td>
+    </tr>
+    <tr class="warn">
+      <td>PW-2026-031</td><td>Kiran Reddy</td><td>Chemistry — JEE Main</td><td>Ms. Deepa Menon</td>
+      <td class="yellow">63%</td><td class="yellow">52%</td><td class="yellow">61 / 100</td>
+      <td class="yellow">↓ −12 pts</td><td class="yellow">3</td>
+      <td><span class="badge badge-warn">Warning</span></td><td>Chemical Bonding</td>
+    </tr>
+    <tr class="warn">
+      <td>PW-2026-078</td><td>Meera Joshi</td><td>Mathematics — JEE Main</td><td>Mr. Sanjay Verma</td>
+      <td class="green">74%</td><td class="red">47%</td><td class="green">69 / 100</td>
+      <td class="gray">→ stable</td><td class="yellow">2</td>
+      <td><span class="badge badge-warn">Warning</span></td><td>Coordinate Geometry</td>
+    </tr>
+    <tr class="warn">
+      <td>PW-2026-006</td><td>Aditya Singh</td><td>Physics — JEE Adv</td><td>Mr. Rajiv Kumar</td>
+      <td class="red">57%</td><td class="green">71%</td><td class="green">72 / 100</td>
+      <td class="green">↑ +4 pts</td><td class="yellow">1</td>
+      <td><span class="badge badge-warn">Warning</span></td><td>Optics</td>
+    </tr>
+    <tr class="warn">
+      <td>PW-2026-115</td><td>Pooja Agarwal</td><td>Biology — NEET</td><td>Dr. Anita Rao</td>
+      <td class="green">68%</td><td class="yellow">54%</td><td class="yellow">63 / 100</td>
+      <td class="yellow">↓ −9 pts</td><td class="yellow">2</td>
+      <td><span class="badge badge-warn">Warning</span></td><td>Genetics</td>
+    </tr>
+    <tr>
+      <td>PW-2026-022</td><td>Rohan Kapoor</td><td>Physics — JEE Adv</td><td>Mr. Rajiv Kumar</td>
+      <td class="green">88%</td><td class="green">91%</td><td class="green">84 / 100</td>
+      <td class="green">↑ +6 pts</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>PW-2026-067</td><td>Ananya Krishnan</td><td>Chemistry — JEE Adv</td><td>Ms. Deepa Menon</td>
+      <td class="green">92%</td><td class="green">88%</td><td class="green">79 / 100</td>
+      <td class="green">↑ +11 pts</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>PW-2026-009</td><td>Dev Patel</td><td>Mathematics — JEE Adv</td><td>Mr. Sanjay Verma</td>
+      <td class="green">81%</td><td class="green">77%</td><td class="green">88 / 100</td>
+      <td class="green">↑ +3 pts</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>PW-2026-044</td><td>Isha Mehta</td><td>Biology — NEET</td><td>Dr. Anita Rao</td>
+      <td class="green">85%</td><td class="green">93%</td><td class="green">91 / 100</td>
+      <td class="green">↑ +8 pts</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>PW-2026-091</td><td>Nikhil Bose</td><td>Chemistry — NEET</td><td>Ms. Deepa Menon</td>
+      <td class="green">79%</td><td class="green">82%</td><td class="green">74 / 100</td>
+      <td class="gray">→ stable</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>PW-2026-033</td><td>Tanvi Desai</td><td>Mathematics — JEE Main</td><td>Mr. Sanjay Verma</td>
+      <td class="green">76%</td><td class="green">68%</td><td class="green">71 / 100</td>
+      <td class="green">↑ +5 pts</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>PW-2026-058</td><td>Siddharth Roy</td><td>Physics — JEE Main</td><td>Mr. Rajiv Kumar</td>
+      <td class="green">83%</td><td class="green">75%</td><td class="green">77 / 100</td>
+      <td class="gray">→ stable</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>PW-2026-074</td><td>Lakshmi Iyer</td><td>Biology — NEET</td><td>Dr. Anita Rao</td>
+      <td class="green">90%</td><td class="green">86%</td><td class="green">82 / 100</td>
+      <td class="green">↑ +9 pts</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>PW-2026-011</td><td>Harsh Tiwari</td><td>Chemistry — JEE Main</td><td>Ms. Deepa Menon</td>
+      <td class="green">71%</td><td class="green">64%</td><td class="green">68 / 100</td>
+      <td class="gray">→ stable</td><td class="gray">0</td>
+      <td><span class="badge badge-ok">On Track</span></td><td>—</td>
+    </tr>
+  </tbody>
+</table>
 </body>
 </html>

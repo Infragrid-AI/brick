@@ -44,7 +44,11 @@
       {
         "language": "brick",
         "scopeName": "source.brick",
-        "path": "./syntaxes/brick.tmLanguage.json"
+        "path": "./syntaxes/brick.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.javascript": "javascript",
+          "meta.embedded.block.python": "python"
+        }
       }
     ],
     "snippets": [

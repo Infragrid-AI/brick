@@ -102,7 +102,8 @@
         { "include": "#stmt_upload" },
         { "include": "#stmt_report" },
         { "include": "#stmt_return" },
-        { "include": "#stmt_code_block" },
+        { "include": "#stmt_js_block" },
+        { "include": "#stmt_py_block" },
         { "include": "#stmt_var_assign" },
         { "include": "#stmt_compound_assign" }
       ]
@@ -347,16 +348,28 @@
       }
     },
 
-    "stmt_code_block": {
-      "name": "meta.embedded.brick",
-      "begin": "\\b(js|python)\\s*\\{",
+    "stmt_js_block": {
+      "name": "meta.embedded.block.js.brick",
+      "begin": "\\b(js)\\s*\\{",
       "end": "\\}",
       "beginCaptures": {
         "1": { "name": "keyword.control.brick storage.type.language.brick" }
       },
-      "contentName": "meta.embedded.code.brick",
+      "contentName": "meta.embedded.block.javascript",
       "patterns": [
-        { "include": "source.js" },
+        { "include": "source.js" }
+      ]
+    },
+
+    "stmt_py_block": {
+      "name": "meta.embedded.block.python.brick",
+      "begin": "\\b(python)\\s*\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.brick storage.type.language.brick" }
+      },
+      "contentName": "meta.embedded.block.python",
+      "patterns": [
         { "include": "source.python" }
       ]
     },

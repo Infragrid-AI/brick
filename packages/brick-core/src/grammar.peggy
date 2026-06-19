@@ -84,6 +84,7 @@ ReturnType
 
 Stmt
   = IfStmt
+  / PForStmt
   / ForStmt
   / RepeatStmt
   / WhileStmt
@@ -120,6 +121,7 @@ Stmt
   / PyBlockStmt
   / LoadExcelStmt
   / UploadFileStmt
+  / RenderFileStmt
   / ReportStmt
   / ReturnStmt
 
@@ -322,6 +324,11 @@ UploadFileStmt
   = "upload" _ file:Expr _ "to" _ selector:Expr variable:(_ "->" _ "@" n:Identifier { return n; })? _
   { return { kind: "upload_file", file, selector, variable: variable || undefined, location: loc() }; }
 
+// render "src/Component.tsx" with @data [-> @html]
+RenderFileStmt
+  = "render" _ file:StringLit _ "with" _ data:Expr variable:(_ "->" _ "@" n:Identifier { return n; })? _
+  { return { kind: "render_file", file, data, variable: variable || undefined, location: loc() }; }
+
 // report title: <value> { jsx }
 ReportStmt
   = "report" _ "title" _ ":" _ title:Expr _ "{" content:BlockCode "}" _
@@ -349,6 +356,11 @@ ElseClause
 ForStmt
   = "for" _ "@" variable:Identifier _ "in" _ collection:Expr _ "{" _ body:Stmt* _ "}" _
   { return { kind: "for_each", variable, collection, body, location: loc() }; }
+
+// pfor [@batch(n)] @item in @list { stmts } [-> @outputVar]
+PForStmt
+  = "pfor" _ batchSize:("@batch" _ "(" _ n:Number _ ")" _ { return Math.floor(n); })? "@" variable:Identifier _ "in" _ collection:Expr _ "{" _ body:Stmt* _ "}" _ outputVar:("->" _ "@" n:Identifier { return n; })? _
+  { return { kind: "pfor", variable, collection, body, outputVar: outputVar || undefined, batchSize: batchSize || undefined, location: loc() }; }
 
 // repeat <n> { stmts }
 RepeatStmt

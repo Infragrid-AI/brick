@@ -97,8 +97,6 @@ export type ExtractTableStmt = { kind: "extract_table"; description: string; out
 // @var = value  |  value -> @var
 export type SetVarStmt = { kind: "set_var"; variable: string; value: Expr; location?: Location };
 
-// save @var as "name"
-export type SaveTableStmt = { kind: "save_table"; variable: string; name: string; location?: Location };
 
 // extract from @var "query" -> @result
 export type ExtractStmt = { kind: "extract"; source: string; query: string; variable: string; location?: Location };
@@ -118,6 +116,9 @@ export type UploadFileStmt = { kind: "upload_file"; file: Expr; selector: Expr; 
 // report title: "name" { jsx }
 export type ReportStmt = { kind: "report"; title: Expr; content: string; location?: Location };
 
+// render "src/Component.tsx" with @data [-> @html]
+export type RenderFileStmt = { kind: "render_file"; file: string; data: Expr; variable?: string; location?: Location };
+
 // return @var | value
 export type ReturnStmt = { kind: "return"; value: Expr; location?: Location };
 
@@ -136,14 +137,17 @@ export type ReadPdfStmt      = { kind: "read_pdf";       source: Expr; variable:
 export type ReadPdfPagesStmt = { kind: "read_pdf_pages"; source: Expr; variable: string; location?: Location };
 // ocr "url" -> @text
 export type OcrImageStmt  = { kind: "ocr_image";  source: Expr; variable: string; location?: Location };
-// read_file "url" [as "filename"] -> @text
-export type ReadFileStmt  = { kind: "read_file";  source: Expr; filename?: string; variable: string; location?: Location };
+// open_file "url" [as "filename"] -> @text
+export type ReadFileStmt  = { kind: "open_file";  source: Expr; filename?: string; variable: string; location?: Location };
 // read_gdoc "https://docs.google.com/..." -> @text
 export type ReadGdocStmt  = { kind: "read_gdoc";  url: Expr; variable: string; location?: Location };
+// load_sheet "Sheet Name" -> @rows
+export type LoadSheetStmt = { kind: "load_sheet"; name: Expr; variable: string; location?: Location };
 
 // Control flow
 export type IfStmt          = { kind: "if";              condition: CondExpr; then: Stmt[]; else: Stmt[]; location?: Location };
 export type ForEachStmt     = { kind: "for_each";        variable: string; collection: Expr; body: Stmt[]; location?: Location };
+export type PForStmt        = { kind: "pfor";            variable: string; collection: Expr; body: Stmt[]; outputVar?: string; batchSize?: number; location?: Location };
 export type RepeatStmt      = { kind: "repeat";          count: number; body: Stmt[]; location?: Location };
 export type WhileStmt       = { kind: "while";           condition: CondExpr; body: Stmt[]; location?: Location };
 export type BreakStmt       = { kind: "break";           location?: Location };
@@ -165,13 +169,13 @@ export type Stmt =
   | AiStmt
   | ExtractTableStmt
   | SetVarStmt
-  | SaveTableStmt
   | ExtractStmt
   | JsBlockStmt
   | PyBlockStmt
   | LoadExcelStmt
   | UploadFileStmt
   | ReportStmt
+  | RenderFileStmt
   | ReturnStmt
   | GenStmt
   | GenCodeStmt
@@ -182,8 +186,10 @@ export type Stmt =
   | OcrImageStmt
   | ReadFileStmt
   | ReadGdocStmt
+  | LoadSheetStmt
   | IfStmt
   | ForEachStmt
+  | PForStmt
   | RepeatStmt
   | WhileStmt
   | BreakStmt
@@ -191,6 +197,7 @@ export type Stmt =
   | LogStmt
   | FailStmt
   | CompoundAssign;
+
 
 // ── Top-level declarations ───────────────────────────────────────────────────
 

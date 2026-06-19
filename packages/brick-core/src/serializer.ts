@@ -75,9 +75,6 @@ function stepToLine(step: RunbookStep): string {
       return `${val} -> @${step.variable}`;
     }
 
-    case "store_table":
-      return `save @${step.variable} as "${step.name}"`;
-
     case "extract":
       return `extract from @${step.source} "${step.query.replace(/"/g, '\\"')}" -> @${step.variable}`;
 
@@ -130,13 +127,15 @@ function stepToLine(step: RunbookStep): string {
     case "ocr_image":
       return `ocr ${q(step.source)} -> @${step.variable}`;
 
-    case "read_file": {
+    case "open_file": {
       const fname = step.filename ? ` as "${step.filename}"` : "";
-      return `read_file ${q(step.source)}${fname} -> @${step.variable}`;
+      return `open_file ${q(step.source)}${fname} -> @${step.variable}`;
     }
 
     case "read_gdoc":
       return `read_gdoc ${q(step.url)} -> @${step.variable}`;
+    case "load_sheet":
+      return `load_sheet ${q(step.name)} -> @${step.variable}`;
 
     case "compound_assign":
       return `@${step.variable} ${step.op} ${step.value}`;
