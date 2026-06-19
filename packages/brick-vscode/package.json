@@ -2,7 +2,7 @@
   "name": "brick-lang",
   "displayName": "Brick Language",
   "description": "Internal language tooling.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "Infragrid",
   "license": "MIT",
   "repository": {
@@ -92,7 +92,7 @@
     "watch": "node esbuild.js --watch",
     "compile": "tsc -p ./ --noEmit",
     "package": "npm run bundle && npx @vscode/vsce package --no-dependencies",
-    "publish": "npm run package && npx @vscode/vsce publish --packagePath brick-lang-0.3.0.vsix --no-dependencies"
+    "publish": "npm run package && npx @vscode/vsce publish --packagePath brick-lang-0.3.1.vsix --no-dependencies"
   },
   "devDependencies": {
     "@brick/core": "*",
