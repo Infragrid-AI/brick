@@ -99,13 +99,11 @@
     "watch": "node esbuild.js --watch",
     "compile": "tsc -p ./ --noEmit",
     "package": "npm run bundle && npx @vscode/vsce package --no-dependencies",
-    "publish": "npm run bundle && npx @vscode/vsce publish --no-dependencies"
-  },
-  "dependencies": {
-    "@brick/core": "*",
-    "@supabase/supabase-js": "^2.49.4"
+    "publish": "npm run package && npx @vscode/vsce publish --packagePath brick-lang-0.3.0.vsix --no-dependencies"
   },
   "devDependencies": {
+    "@brick/core": "*",
+    "@supabase/supabase-js": "^2.49.4",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.9.2",
