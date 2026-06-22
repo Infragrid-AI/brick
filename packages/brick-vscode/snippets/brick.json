@@ -128,5 +128,40 @@
       "}"
     ],
     "description": "Define a type"
+  },
+  "Open file": {
+    "prefix": "open_file",
+    "body": ["open_file ${1:\"/path/to/file\"} -> @${2:text}"],
+    "description": "Read a local file and extract text"
+  },
+  "Set cache": {
+    "prefix": "set_cache",
+    "body": ["set_cache \"${1:key}\" from @${2:variable}"],
+    "description": "Store a variable in the shared team cache"
+  },
+  "Get cache": {
+    "prefix": "get_cache",
+    "body": ["get_cache \"${1:key}\" -> @${2:variable}"],
+    "description": "Retrieve a value from the shared team cache"
+  },
+  "Read PDF": {
+    "prefix": "read_pdf",
+    "body": ["read_pdf ${1:\"/path/to/file.pdf\"} -> @${2:text}"],
+    "description": "Extract text from a PDF"
+  },
+  "Read Google Doc": {
+    "prefix": "read_gdoc",
+    "body": ["read_gdoc \"${1:https://docs.google.com/document/d/...}\" -> @${2:text}"],
+    "description": "Read a shared Google Doc as text"
+  },
+  "Load sheet": {
+    "prefix": "load_sheet",
+    "body": ["load_sheet \"${1:Sheet name}\" -> @${2:rows}"],
+    "description": "Load a named sheet from the workspace"
+  },
+  "Fail": {
+    "prefix": "fail",
+    "body": ["fail \"${1:error message}\""],
+    "description": "Abort the run with an error message"
   }
 }

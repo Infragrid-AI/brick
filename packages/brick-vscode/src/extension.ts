@@ -536,6 +536,36 @@ const PRIMITIVE_DOCS: Record<string, string> = {
     "```",
     "Ends the function and sets the runbook output.",
   ].join("\n"),
+
+  open_file: [
+    "**`open_file`** — Read a local file and extract its text",
+    "```brick",
+    "open_file \"/Users/you/Downloads/report.pdf\" -> @text",
+    "open_file @filePath -> @text",
+    "```",
+    "Reads a local file (PDF, DOCX, XLSX, CSV, TXT, images) and extracts its text content.  \nWhen run by a teammate, the content is cached in Redis for 90 days so others can retrieve it with **`get_cache`**.",
+  ].join("\n"),
+
+  set_cache: [
+    "**`set_cache`** — Store a variable in the shared team cache",
+    "```brick",
+    "// After loading a file locally",
+    "open_file \"/Users/you/Downloads/data.csv\" -> @csv",
+    "set_cache \"csv_data\" from @csv",
+    "",
+    "// Teammates can then retrieve it",
+    "get_cache \"csv_data\" -> @csv",
+    "```",
+    "Stores a variable in Upstash Redis under a key scoped to this runbook. Any workspace member can retrieve it with **`get_cache`**, even from a different machine. Default TTL: 90 days.",
+  ].join("\n"),
+
+  get_cache: [
+    "**`get_cache`** — Retrieve a value from the shared team cache",
+    "```brick",
+    "get_cache \"csv_data\" -> @csv",
+    "```",
+    "Retrieves a value previously stored with **`set_cache`** into a variable. Fails with a clear error if the cache is empty — someone needs to run `set_cache` first.  \nUseful for sharing large files or computed results across machines without re-running expensive steps.",
+  ].join("\n"),
 };
 
 // ─── Extension entry point ────────────────────────────────────────────────────
