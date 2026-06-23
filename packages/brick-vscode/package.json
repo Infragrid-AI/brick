@@ -19,7 +19,8 @@
   ],
   "keywords": [],
   "activationEvents": [
-    "onLanguage:brick"
+    "onLanguage:brick",
+    "onUri"
   ],
   "contributes": {
     "languages": [

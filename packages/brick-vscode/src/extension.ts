@@ -588,6 +588,36 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidCloseTextDocument((d) => diagnosticCollection.delete(d.uri))
   );
 
+  // ── URI handler — receives token from app.infragrid.ai/auth/vscode-callback ──
+  // Magic link email → app.infragrid.ai/auth/vscode-callback#access_token=...
+  // That page opens vscode://Infragrid.brick-lang/auth?token=...&refresh=...
+  context.subscriptions.push(
+    vscode.window.registerUriHandler({
+      async handleUri(uri: vscode.Uri) {
+        if (uri.path !== "/auth") return;
+        const params = new URLSearchParams(uri.query);
+        const token = params.get("token");
+        const refresh = params.get("refresh") ?? "";
+        if (!token) {
+          vscode.window.showErrorMessage("Brick: sign-in failed — no token in callback URL.");
+          return;
+        }
+        try {
+          const session = await verifyAndBuildSession(token, refresh);
+          await saveSession(context.secrets, session);
+          vscode.window.showInformationMessage(`Brick: Signed in as ${session.email}`);
+          vscode.workspace.textDocuments.forEach(lintDocument);
+        } catch (e: unknown) {
+          const err = e as Error;
+          if (e instanceof AccessDeniedError) {
+            await clearSession(context.secrets);
+          }
+          vscode.window.showErrorMessage(`Brick sign-in failed: ${err.message}`);
+        }
+      },
+    })
+  );
+
   // ── brick.signIn ────────────────────────────────────────────────────────────
   context.subscriptions.push(
     vscode.commands.registerCommand("brick.signIn", async () => {
@@ -598,37 +628,17 @@ export function activate(context: vscode.ExtensionContext): void {
           v && v.includes("@") ? undefined : "Enter a valid email address",
       });
 
-      if (!email) return; // user cancelled
+      if (!email) return;
 
-      await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "Brick: Sending magic link…",
-          cancellable: false,
-        },
-        async () => {
-          try {
-            const session = await signInWithEmail(
-              email,
-              (url) => vscode.env.openExternal(vscode.Uri.parse(url))
-            );
-            await saveSession(context.secrets, session);
-            vscode.window.showInformationMessage(
-              `Signed in! Brick features enabled.`
-            );
-            // Re-lint any already-open brick documents now that we're authed
-            vscode.workspace.textDocuments.forEach(lintDocument);
-          } catch (e: unknown) {
-            const err = e as Error;
-            if (e instanceof AccessDeniedError) {
-              await clearSession(context.secrets);
-              vscode.window.showErrorMessage(err.message);
-            } else {
-              vscode.window.showErrorMessage(`Brick sign-in failed: ${err.message}`);
-            }
-          }
-        }
-      );
+      try {
+        await signInWithEmail(email);
+        vscode.window.showInformationMessage(
+          "Brick: Check your email and click the magic link to sign in."
+        );
+      } catch (e: unknown) {
+        const err = e as Error;
+        vscode.window.showErrorMessage(`Brick sign-in failed: ${err.message}`);
+      }
     })
   );
 
