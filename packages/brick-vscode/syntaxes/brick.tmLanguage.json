@@ -7,11 +7,15 @@
     { "include": "#module_declaration" },
     { "include": "#type_definition" },
     { "include": "#enum_definition" },
-    { "include": "#function_definition" },
+    { "include": "#function_signature" },
+    { "include": "#stmt_js_block" },
+    { "include": "#stmt_py_block" },
+    { "include": "#keyword_fn" },
     { "include": "#statement" },
     { "include": "#expression" }
   ],
   "repository": {
+
     "comment": {
       "name": "comment.line.double-slash.brick",
       "match": "//.*$"
@@ -20,7 +24,7 @@
     "module_declaration": {
       "match": "\\b(module)\\s+([A-Za-z_][A-Za-z0-9_]*)",
       "captures": {
-        "1": { "name": "keyword.declaration.module.brick" },
+        "1": { "name": "keyword.other.module.brick" },
         "2": { "name": "entity.name.namespace.brick" }
       }
     },
@@ -54,30 +58,20 @@
       }
     },
 
-    "function_definition": {
-      "name": "meta.function.brick",
-      "begin": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(",
-      "end": "\\}",
-      "beginCaptures": {
-        "1": { "name": "keyword.declaration.function.brick" },
-        "2": { "name": "entity.name.function.brick" }
-      },
-      "patterns": [
-        { "include": "#comment" },
-        { "include": "#statement" },
-        { "include": "#expression" },
-        {
-          "match": "\\b(->)\\b",
-          "name": "keyword.operator.arrow.brick"
-        },
-        {
-          "match": "([A-Za-z_][A-Za-z0-9_]*)\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*(\\[\\])?)",
-          "captures": {
-            "1": { "name": "variable.parameter.brick" },
-            "2": { "name": "entity.name.type.brick" }
-          }
-        }
-      ]
+    "function_signature": {
+      "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(([^)]*)\\)(?:\\s*(->)\\s*([A-Za-z_][A-Za-z0-9_]*(\\[\\])?))?",
+      "captures": {
+        "1": { "name": "keyword.declaration.function.brick storage.type.function.brick" },
+        "2": { "name": "entity.name.function.brick" },
+        "3": { "name": "meta.parameters.brick" },
+        "4": { "name": "keyword.operator.arrow.brick" },
+        "5": { "name": "entity.name.type.brick" }
+      }
+    },
+
+    "keyword_fn": {
+      "match": "\\b(fn)\\b",
+      "name": "keyword.declaration.function.brick storage.type.function.brick"
     },
 
     "statement": {
@@ -102,62 +96,25 @@
         { "include": "#stmt_upload" },
         { "include": "#stmt_report" },
         { "include": "#stmt_return" },
-        { "include": "#stmt_js_block" },
-        { "include": "#stmt_py_block" },
+        { "include": "#stmt_log_fail" },
         { "include": "#stmt_var_assign" },
-        { "include": "#stmt_compound_assign" }
+        { "include": "#stmt_compound_assign" },
+        { "include": "#stmt_arrow_assign" }
       ]
     },
 
     "stmt_control_flow": {
       "patterns": [
         {
-          "name": "meta.block.if.brick",
-          "begin": "\\b(if|while)\\b",
-          "end": "(?<=\\})",
-          "beginCaptures": { "1": { "name": "keyword.control.flow.brick" } },
-          "patterns": [
-            { "include": "#stmt_operator_compare" },
-            { "include": "#statement" },
-            { "include": "#expression" },
-            {
-              "match": "\\b(else)\\b",
-              "name": "keyword.control.flow.brick"
-            }
-          ]
-        },
-        {
-          "name": "meta.block.for.brick",
-          "begin": "\\b(for)\\b",
-          "end": "(?<=\\})",
-          "beginCaptures": { "1": { "name": "keyword.control.flow.brick" } },
-          "patterns": [
-            { "match": "\\b(in)\\b", "name": "keyword.control.flow.brick" },
-            { "include": "#statement" },
-            { "include": "#expression" }
-          ]
-        },
-        {
-          "name": "meta.block.repeat.brick",
-          "begin": "\\b(repeat)\\b",
-          "end": "(?<=\\})",
-          "beginCaptures": { "1": { "name": "keyword.control.flow.brick" } },
-          "patterns": [
-            { "include": "#statement" },
-            { "include": "#expression" }
-          ]
-        },
-        {
-          "match": "\\b(break|continue)\\b",
+          "match": "\\b(if|else|while|for|in|repeat|break|continue)\\b",
           "name": "keyword.control.flow.brick"
-        },
-        {
-          "match": "\\b(log|fail)\\b",
-          "name": "keyword.control.brick support.function.builtin.brick"
         },
         {
           "match": "\\b(not)\\b",
           "name": "keyword.operator.logical.brick"
+        },
+        {
+          "include": "#stmt_operator_compare"
         }
       ]
     },
@@ -171,7 +128,7 @@
       "patterns": [
         {
           "match": "\\b(navigate)\\b",
-          "captures": { "1": { "name": "keyword.control.brick" } }
+          "name": "keyword.control.brick"
         },
         {
           "match": "\\b(go)\\s+(to)\\b",
@@ -216,7 +173,6 @@
     },
 
     "stmt_press": {
-      "name": "meta.stmt.press.brick",
       "match": "\\b(press)\\s+([A-Za-z0-9]+|\"[^\"]+\")",
       "captures": {
         "1": { "name": "keyword.control.brick" },
@@ -225,7 +181,6 @@
     },
 
     "stmt_wait": {
-      "name": "meta.stmt.wait.brick",
       "match": "\\b(wait)\\s+([0-9]+(?:\\.[0-9]+)?)(ms|s|m)?\\b",
       "captures": {
         "1": { "name": "keyword.control.brick" },
@@ -244,23 +199,19 @@
 
     "stmt_screenshot": {
       "match": "\\b(screenshot)\\b",
-      "captures": {
-        "1": { "name": "keyword.control.brick" }
-      }
+      "name": "keyword.control.brick"
     },
 
     "stmt_ai": {
       "match": "\\b(ai)\\b",
-      "captures": {
-        "1": { "name": "keyword.control.brick support.function.ai.brick" }
-      }
+      "name": "keyword.control.brick support.function.builtin.brick"
     },
 
     "stmt_extract": {
       "patterns": [
         {
           "match": "\\b(extract_table|extract_from)\\b",
-          "captures": { "1": { "name": "keyword.control.brick" } }
+          "name": "keyword.control.brick"
         },
         {
           "match": "\\b(extract)\\s+(table|from)\\b",
@@ -276,11 +227,11 @@
       "patterns": [
         {
           "match": "\\b(gen_code|gen)\\b",
-          "captures": { "1": { "name": "keyword.control.brick support.function.builtin.brick" } }
+          "name": "keyword.control.brick support.function.builtin.brick"
         },
         {
           "match": "\\b(as|using)\\b",
-          "captures": { "1": { "name": "keyword.control.brick" } }
+          "name": "keyword.control.brick"
         }
       ]
     },
@@ -288,31 +239,27 @@
     "stmt_read": {
       "patterns": [
         {
-          "match": "\\b(open_file)\\b",
-          "captures": { "1": { "name": "keyword.control.brick support.function.builtin.brick" } }
-        },
-        {
-          "match": "\\b(read_pdf_pages|read_pdf|read_gdoc|ocr)\\b",
-          "captures": { "1": { "name": "keyword.control.brick" } }
+          "match": "\\b(open_file|read_pdf_pages|read_pdf|read_gdoc|ocr)\\b",
+          "name": "keyword.control.brick"
         }
       ]
     },
 
     "stmt_import": {
       "match": "\\b(import)\\b",
-      "captures": { "1": { "name": "keyword.control.import.brick" } }
+      "name": "keyword.control.import.brick"
     },
 
     "stmt_cookies": {
       "match": "\\b(set_cookies|load_excel_all)\\b",
-      "captures": { "1": { "name": "keyword.control.brick" } }
+      "name": "keyword.control.brick"
     },
 
     "stmt_load": {
       "patterns": [
         {
-          "match": "\\b(load_excel)\\b",
-          "captures": { "1": { "name": "keyword.control.brick" } }
+          "match": "\\b(load_sheet|load_excel)\\b",
+          "name": "keyword.control.brick"
         },
         {
           "match": "\\b(load)\\s+(excel)\\b.*\\b(sheet)\\b",
@@ -343,9 +290,12 @@
 
     "stmt_return": {
       "match": "\\b(return)\\b",
-      "captures": {
-        "1": { "name": "keyword.control.flow.brick" }
-      }
+      "name": "keyword.control.flow.brick"
+    },
+
+    "stmt_log_fail": {
+      "match": "\\b(log|fail)\\b",
+      "name": "support.function.builtin.brick"
     },
 
     "stmt_js_block": {
@@ -375,20 +325,10 @@
     },
 
     "stmt_var_assign": {
-      "patterns": [
-        {
-          "match": "(@[A-Za-z_][A-Za-z0-9_]*)\\s*=",
-          "captures": {
-            "1": { "name": "variable.other.brick" }
-          }
-        },
-        {
-          "match": "->\\s*(@[A-Za-z_][A-Za-z0-9_]*)",
-          "captures": {
-            "1": { "name": "variable.other.brick" }
-          }
-        }
-      ]
+      "match": "(@[A-Za-z_][A-Za-z0-9_]*)\\s*=(?!=)",
+      "captures": {
+        "1": { "name": "variable.other.brick" }
+      }
     },
 
     "stmt_compound_assign": {
@@ -396,6 +336,14 @@
       "captures": {
         "1": { "name": "variable.other.brick" },
         "2": { "name": "keyword.operator.assignment.compound.brick" }
+      }
+    },
+
+    "stmt_arrow_assign": {
+      "match": "(->)\\s*(@[A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.operator.arrow.brick" },
+        "2": { "name": "variable.other.brick" }
       }
     },
 
@@ -420,7 +368,8 @@
       "begin": "\"",
       "end": "\"",
       "patterns": [
-        { "name": "constant.character.escape.brick", "match": "\\\\." }
+        { "name": "constant.character.escape.brick", "match": "\\\\." },
+        { "name": "variable.other.brick", "match": "@[A-Za-z_][A-Za-z0-9_]*" }
       ]
     },
 
