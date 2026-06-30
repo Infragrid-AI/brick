@@ -66,8 +66,6 @@ TopLevelVar
 FunctionDef
   = "fn" _ name:Identifier _ "(" _ params:ParamList _ ")" _ ret:ReturnType? _ "{" _ body:Stmt* _ "}" _
   { return { kind: "function_def", name, params: params || [], returnType: ret || undefined, body, location: loc() }; }
-  / name:Identifier _ "(" _ params:ParamList _ ")" _ ret:ReturnType? _ "{" _ body:Stmt* _ "}" _
-  { return { kind: "function_def", name, params: params || [], returnType: ret || undefined, body, location: loc() }; }
 
 ParamList
   = first:Param rest:(_ "," _ p:Param { return p; })* { return [first, ...rest]; }

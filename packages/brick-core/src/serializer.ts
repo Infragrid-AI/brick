@@ -2,7 +2,7 @@ import type { RunbookStep } from "./compiler";
 
 // Converts an array of RunbookStep back to .brick source code
 export function serialize(steps: RunbookStep[], fnName = "main"): string {
-  const lines: string[] = [`${fnName}() {`];
+  const lines: string[] = [`fn ${fnName}() {`];
 
   for (const step of steps) {
     lines.push("  " + stepToLine(step));

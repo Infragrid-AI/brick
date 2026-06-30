@@ -1,12 +1,12 @@
 {
   "Main function": {
-    "prefix": "main",
+    "prefix": "fn",
     "body": [
-      "main(${1:input}: ${2:String}) -> ${3:Table} {",
+      "fn ${1:main}(${2:input}: ${3:String}) -> ${4:Table} {",
       "  $0",
       "}"
     ],
-    "description": "Define the main entry function"
+    "description": "Define a function"
   },
   "Navigate": {
     "prefix": "go",
